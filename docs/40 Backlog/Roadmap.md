@@ -24,4 +24,4 @@ updated: 2026-10-16
 - [ ] Multi-style blend ("70% japandi, 30% wabi-sabi")
 - [ ] Style thumbnails
 - [ ] Data in JSON files beside the page
-- [ ] Put the code on GitHub with the vault as `/docs`
+- [x] Put the code on GitHub with the vault as `/docs` — https://github.com/asceelhisham-wq/roomprompt

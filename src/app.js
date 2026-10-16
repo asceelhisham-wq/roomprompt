@@ -37,11 +37,17 @@ function buildItems() {
       });
     });
   });
+  const subOf = {};
+  Object.entries(SUBCATEGORIES).forEach(([cat, rows]) => rows.forEach(([sid, , ids]) =>
+    ids.split(" ").forEach((b) => { subOf[cat + "/" + b] = sid; })));
   out.forEach((it) => {
-    it.hay = (it.name + " " + it.finish + " " + it.promptText + " " + it.category).toLowerCase();
+    it.sub = subOf[it.category + "/" + it.id.split("--")[0]] || "other";
+    it.hay = (it.name + " " + it.finish + " " + it.promptText + " " + it.category + " " + subName(it.category, it.sub)).toLowerCase();
   });
   return out;
 }
+function subList(cat) { return (SUBCATEGORIES[cat] || []).map(([id, name]) => ({ id, name })); }
+function subName(cat, sub) { const r = (SUBCATEGORIES[cat] || []).find((x) => x[0] === sub); return r ? r[1] : "More"; }
 const ITEMS = buildItems();
 const ITEM_MAP = new Map(ITEMS.map((i) => [i.id, i]));
 
@@ -62,6 +68,7 @@ const state = {
   selected: [],
   search: "",
   category: "all",
+  sub: "all",
   showAll: false,
   pages: {},
 };
@@ -226,6 +233,25 @@ function renderChips(base) {
   };
   mk("all", "All", base.length);
   CATEGORIES.forEach((c) => { if (counts[c.id]) mk(c.id, c.name, counts[c.id]); });
+
+  const subWrap = $("subChips");
+  subWrap.innerHTML = "";
+  subWrap.hidden = state.category === "all";
+  if (state.category === "all") return;
+  const inCat = base.filter((i) => i.category === state.category);
+  const sc = {};
+  inCat.forEach((i) => { sc[i.sub] = (sc[i.sub] || 0) + 1; });
+  const mkSub = (id, label, n) => {
+    const b = make("button", "chip sub-chip", label);
+    b.type = "button";
+    b.dataset.sub = id;
+    b.setAttribute("aria-pressed", String(state.sub === id));
+    b.appendChild(make("span", "n", fmtNum(n)));
+    subWrap.appendChild(b);
+  };
+  const catName = (byId(CATEGORIES, state.category) || {}).name || "";
+  mkSub("all", "All " + catName.toLowerCase(), inCat.length);
+  subList(state.category).forEach((s) => { if (sc[s.id]) mkSub(s.id, s.name, sc[s.id]); });
 }
 function renderLibrary() {
   const base = roomSearchList();
@@ -233,6 +259,7 @@ function renderLibrary() {
   const body = $("libBody");
   body.innerHTML = "";
   let list = state.category === "all" ? base : base.filter((i) => i.category === state.category);
+  if (state.category !== "all" && state.sub !== "all") list = list.filter((i) => i.sub === state.sub);
 
   const matches = state.style ? list.filter((i) => matchSet.has(i.id)).length : 0;
   const meta = $("libMeta");
@@ -249,8 +276,12 @@ function renderLibrary() {
     return;
   }
   const sel = new Set(state.selected);
-  CATEGORIES.forEach((cat) => {
-    const group = list.filter((i) => i.category === cat.id);
+  // All categories: one section per category. One category: one section per subcategory.
+  const sections = state.category === "all"
+    ? CATEGORIES.map((c) => ({ id: c.id, name: c.name, test: (i) => i.category === c.id }))
+    : subList(state.category).concat([{ id: "other", name: "More" }]).map((s) => ({ id: state.category + "/" + s.id, name: s.name, test: (i) => i.sub === s.id }));
+  sections.forEach((cat) => {
+    const group = list.filter(cat.test);
     if (!group.length) return;
     group.sort((a, b) =>
       (matchSet.has(b.id) - matchSet.has(a.id)) || (b.sig - a.sig) ||
@@ -269,13 +300,14 @@ function renderLibrary() {
       card.dataset.selected = String(sel.has(item.id));
       card.dataset.suggested = String(matchSet.has(item.id));
       card.appendChild(make("div", "it-name", item.name));
+      if (state.category === "all") card.appendChild(make("div", "it-sub", subName(item.category, item.sub)));
       if (item.finish) card.appendChild(make("div", "it-fin", item.finish));
       card.appendChild(make("div", "it-prompt", item.promptText));
       grid.appendChild(card);
     });
     section.appendChild(grid);
     if (group.length > limit) {
-      const more = make("button", "btn more-btn", "Show " + Math.min(PAGE * 2, group.length - limit) + " more " + cat.name.toLowerCase() + " (" + fmtNum(group.length - limit) + " hidden)");
+      const more = make("button", "btn more-btn", "Show " + Math.min(PAGE * 2, group.length - limit) + " more in " + cat.name.toLowerCase() + " (" + fmtNum(group.length - limit) + " hidden)");
       more.type = "button";
       more.dataset.more = cat.id;
       section.appendChild(more);
@@ -309,7 +341,7 @@ function renderSelection() {
     const row = make("div", "sel-item");
     const text = make("div", "si-text");
     text.appendChild(make("div", "si-name", item.name + (item.finish ? " · " + item.finish : "")));
-    text.appendChild(make("div", "si-cat", (byId(CATEGORIES, item.category) || {}).name || item.category));
+    text.appendChild(make("div", "si-cat", ((byId(CATEGORIES, item.category) || {}).name || item.category) + " › " + subName(item.category, item.sub)));
     row.appendChild(text);
     const rm = make("button", "sel-remove", "×");
     rm.type = "button";
@@ -549,7 +581,7 @@ function renderOutputs() { renderPrompt(); renderPreview(); }
 
 /* ---------- actions ---------- */
 function setRoom(id) {
-  state.room = id; state.category = "all"; state.pages = {};
+  state.room = id; state.category = "all"; state.sub = "all"; state.pages = {};
   renderRooms(); renderLibrary(); renderOutputs();
 }
 function setStyle(id, quiet) {
@@ -596,7 +628,7 @@ function randomize() {
 }
 function reset() {
   Object.assign(state, { style: null, styleQuery: "", styleGroup: "all", palette: "warm-neutrals", paletteTouched: false, paletteQuery: "",
-    mood: "daylight", selected: [], search: "", category: "all", showAll: false, pages: {}, out: "3d", plan: "plan", size: { w: "", l: "" } });
+    mood: "daylight", selected: [], search: "", category: "all", sub: "all", showAll: false, pages: {}, out: "3d", plan: "plan", size: { w: "", l: "" } });
   state.cam = { pos: "fl", height: "eye", lens: "24", ratio: "16:9", fmt: "plain" };
   computeMatches();
   ["search", "styleSearch", "paletteSearch", "sizeW", "sizeL"].forEach((id) => { $(id).value = ""; });
@@ -662,7 +694,7 @@ function init() {
   let t1 = null;
   $("search").addEventListener("input", (e) => {
     clearTimeout(t1);
-    t1 = setTimeout(() => { state.search = e.target.value; state.category = "all"; state.pages = {}; renderLibrary(); }, 120);
+    t1 = setTimeout(() => { state.search = e.target.value; state.category = "all"; state.sub = "all"; state.pages = {}; renderLibrary(); }, 120);
   });
   $("styleSearch").addEventListener("input", (e) => { state.styleQuery = e.target.value; renderStyles(); });
   $("paletteSearch").addEventListener("input", (e) => { state.paletteQuery = e.target.value; renderPalettes(); });
@@ -684,6 +716,14 @@ function init() {
     const c = e.target.closest("[data-cat]");
     if (!c) return;
     state.category = state.category === c.dataset.cat ? "all" : c.dataset.cat;
+    state.sub = "all"; state.pages = {};
+    renderLibrary();
+  });
+  $("subChips").addEventListener("click", (e) => {
+    const c = e.target.closest("[data-sub]");
+    if (!c) return;
+    state.sub = state.sub === c.dataset.sub ? "all" : c.dataset.sub;
+    state.pages = {};
     renderLibrary();
   });
   $("libBody").addEventListener("click", (e) => {
@@ -696,7 +736,7 @@ function init() {
     state.showAll = !state.showAll;
     e.currentTarget.setAttribute("aria-pressed", String(state.showAll));
     e.currentTarget.textContent = state.showAll ? "This room only" : "Show all rooms";
-    state.category = "all"; state.pages = {};
+    state.category = "all"; state.sub = "all"; state.pages = {};
     renderLibrary();
   });
   $("tab3d").addEventListener("click", () => { state.out = "3d"; renderPrompt(); });

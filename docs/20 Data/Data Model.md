@@ -16,9 +16,10 @@ Data is stored as compact rows and expanded once at load by `app.js`.
 | `FINISHES` | `{ group: [[key, label, phrase, matchTerms, styleTags]] }` | used by the generator |
 | `BASES` | `[id, name, category, roomCodes, group(-skip), template, baseStyles]` | one item per finish |
 | `SIGNATURE_ITEMS` | v1 item objects | kept as-is, flagged `sig: true` |
+| `SUBCATEGORIES` | `{ cat: [[subId, name, "baseIds…"]] }` | `item.sub` — see [[Subcategories]] |
 | `CATEGORIES`, `LIGHTING_MOODS` | `{ id, name }`, `{ id, label, phrase }` | — |
 
-**Generated item:** `{ id: "base--finish", name, finish, category, roomTypes[], styleTags[], terms[], promptText, hay }`
+**Generated item:** `{ id: "base--finish", name, finish, category, sub, roomTypes[], styleTags[], terms[], promptText, hay }`
 
 **Reference rules**
 - room codes → `ROOM_TYPES.code`; `styleTags` → `STYLES.id`; `palette` → `COLOR_PALETTES.id`

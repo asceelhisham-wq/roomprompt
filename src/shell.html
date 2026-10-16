@@ -146,6 +146,11 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .chip .n { color: var(--muted); font-variant-numeric: tabular-nums; margin-left: 4px; }
 .chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .chip[aria-pressed="true"] .n { color: var(--line); }
+.sub-chips { margin-top: 7px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.sub-chip { font-size: 11.5px; padding: 3px 10px; }
+.sub-chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-ink); border-color: var(--accent); }
+.sub-chip[aria-pressed="true"] .n { color: var(--accent-ink); }
+.item .it-sub { font-size: 10.5px; color: var(--muted); letter-spacing: .02em; margin-top: 1px; }
 .lib-body { overflow-y: auto; padding: 14px 20px 28px; flex: 1; }
 .cat-section { margin-bottom: 22px; }
 .cat-section h3 { font-size: 12px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; padding-bottom: 7px; border-bottom: 1px solid var(--line-soft); display: flex; justify-content: space-between; }
@@ -316,6 +321,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       </div>
       <div class="lib-meta" id="libMeta"></div>
       <div class="chips" id="chips"></div>
+      <div class="chips sub-chips" id="subChips" hidden></div>
     </div>
     <div class="lib-body" id="libBody"></div>
   </section>

@@ -63,8 +63,8 @@ const SIGNATURE_ITEMS = [
   { id: "zellige-wall", name: "Zellige tile wall", category: "walls", roomTypes: ["kitchen", "bathroom"], styleTags: ["moroccan", "mediterranean", "modern-luxury", "contemporary"], promptText: "a glazed zellige tile wall" },
 
   /* textiles (9) */
-  { id: "wool-rug", name: "Wool area rug", category: "textiles", roomTypes: ["living-room", "bedroom", "dining-room", "home-office", "guest-room"], styleTags: ["scandinavian", "contemporary", "transitional", "traditional", "boho"], promptText: "a hand-knotted wool area rug" },
-  { id: "persian-rug", name: "Persian rug", category: "textiles", roomTypes: ["living-room", "bedroom", "dining-room", "entrance-hall"], styleTags: ["boho", "traditional", "maximalist", "victorian", "mediterranean"], promptText: "a vintage Persian rug" },
+  { id: "wool-rug", name: "Wool area rug", category: "flooring", roomTypes: ["living-room", "bedroom", "dining-room", "home-office", "guest-room"], styleTags: ["scandinavian", "contemporary", "transitional", "traditional", "boho"], promptText: "a hand-knotted wool area rug" },
+  { id: "persian-rug", name: "Persian rug", category: "flooring", roomTypes: ["living-room", "bedroom", "dining-room", "entrance-hall"], styleTags: ["boho", "traditional", "maximalist", "victorian", "mediterranean"], promptText: "a vintage Persian rug" },
   { id: "linen-curtains", name: "Linen curtains", category: "textiles", roomTypes: ["living-room", "bedroom", "dining-room", "guest-room"], styleTags: ["scandinavian", "coastal", "contemporary", "minimalist", "japandi"], promptText: "floor-length linen curtains" },
   { id: "roman-blinds", name: "Roman blinds", category: "textiles", roomTypes: ["kitchen", "bedroom", "home-office", "bathroom"], styleTags: ["traditional", "transitional", "farmhouse", "country-cottage"], promptText: "tailored roman blinds" },
   { id: "throw-pillows", name: "Throw pillows", category: "textiles", roomTypes: ["living-room", "bedroom", "guest-room", "balcony"], styleTags: ["boho", "coastal", "contemporary", "maximalist", "tropical"], promptText: "layered throw pillows" },

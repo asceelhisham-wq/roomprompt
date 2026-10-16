@@ -551,3 +551,85 @@ const BASES = [
   ["crib","Crib","kids","N","wood","{a} {f} crib","scandinavian"],
   ["glider","Nursing glider","kids","N","uph","{a} {f} nursing glider","contemporary"],
 ];
+
+/* Subcategories per category. Each lists the base ids (v1 signature ids or BASES ids)
+   that belong to it. check.js fails if any piece is left without a subcategory. */
+const SUBCATEGORIES = {
+  furniture: [
+    ["sofas", "Sofas & daybeds", "sectional-sofa loveseat sofa3 curved-sofa chesterfield daybed modular-sofa majlis-seating"],
+    ["chairs", "Armchairs & lounge", "accent-armchair lounge-chair wingback slipper-chair swivel-chair woven-armchair egg-chair rocking-chair recliner theatre-seats"],
+    ["dining", "Dining tables & chairs", "dining-chairs dining-uph dining-table round-table extending-table stone-dining dining-bench"],
+    ["tables", "Coffee, side & console", "coffee-table coffee-wood coffee-stone nesting-tables side-table console console-stone"],
+    ["beds", "Beds", "platform-bed upholstered-bed uph-bed bed-frame canopy-bed bunk-bed"],
+    ["bedroom", "Nightstands, dressers & dressing tables", "nightstand dresser wardrobe dressing-table"],
+    ["desks", "Desks & office chairs", "writing-desk desk desk-chair"],
+    ["stools", "Stools, benches & ottomans", "bar-stools counter-stools entry-bench ottoman-pouf ottoman pouf"],
+  ],
+  lighting: [
+    ["ceiling", "Pendants & chandeliers", "pendant-light chandelier globe-pendant dome-pendant glass-chandelier woven-pendant linear-pendant paper-lantern"],
+    ["lamps", "Floor, table & desk lamps", "floor-lamp table-lamp arc-lamp desk-lamp mushroom-lamp lantern"],
+    ["wall", "Wall lights", "wall-sconce sconces picture-light"],
+    ["builtin", "Built-in & ambient", "led-strip cove-lighting recessed-lights track-lights skylight"],
+  ],
+  decor: [
+    ["mirrors", "Mirrors", "round-mirror floor-mirror arched-mirror framed-mirror"],
+    ["wall-art", "Wall art & hangings", "framed-art photo-frames tapestry wall-hanging wall-baskets wall-clock neon-sign"],
+    ["objects", "Vases, trays & objects", "ceramic-vase vase bud-vases sculpture decorative-tray tray bowl bookends coffee-books dallah"],
+    ["candles", "Candles & incense", "candles candlesticks mabkhara"],
+  ],
+  flooring: [
+    ["wood", "Wood floors", "oak-hardwood walnut-floor herringbone-parquet wood-floor parquet"],
+    ["hard", "Stone, tile & concrete", "polished-concrete terrazzo marble-tile ceramic-tile stone-floor tile-floor"],
+    ["rugs", "Rugs & runners", "area-rug pattern-rug runner natural-rug wool-rug persian-rug"],
+    ["carpet", "Carpet", "wool-carpet carpet"],
+  ],
+  walls: [
+    ["paint", "Paint & plaster", "limewash-paint venetian-plaster accent-wall paint limewash plaster"],
+    ["paper", "Wallpaper & murals", "wallpaper mural"],
+    ["panelling", "Panelling & trim", "shiplap wood-paneling panelling wainscoting acoustic"],
+    ["feature", "Brick, tile & stone walls", "exposed-brick zellige-wall tile-wall stone-wall"],
+  ],
+  textiles: [
+    ["window", "Curtains & blinds", "linen-curtains roman-blinds sheer-drapes curtains sheers blinds"],
+    ["soft", "Cushions & throws", "throw-pillows throw-blanket velvet-cushions cushions throw boucle-upholstery"],
+    ["bed", "Bedding", "bedding"],
+    ["table", "Table linen", "tablecloth"],
+  ],
+  plants: [
+    ["floor", "Floor plants & trees", "monstera fiddle-leaf olive-tree bird-of-paradise snake-plant zz-plant p-monstera p-fiddle p-olive p-kentia p-bird p-rubber p-lemon p-date p-cactus p-snake"],
+    ["small", "Tabletop & hanging", "pothos succulents hanging-fern bonsai p-pothos p-fern p-bonsai p-orchid"],
+  ],
+  kitchen: [
+    ["cabinets", "Cabinets & shelving", "shaker-cabinets open-shelving cab-paint cab-wood open-shelves hardware"],
+    ["surfaces", "Counters, islands & backsplash", "kitchen-island quartz-counter counters island backsplash"],
+    ["fixtures", "Sinks, taps & hoods", "range-hood farmhouse-sink sink faucet pot-rack island-pendants"],
+  ],
+  bathroom: [
+    ["bathing", "Tubs & showers", "freestanding-tub walk-in-shower rainfall-shower tub shower"],
+    ["vanity", "Vanities & basins", "vessel-sink double-vanity vanity basin"],
+    ["fittings", "Mirrors & fittings", "backlit-mirror towel-rail fixtures pill-mirror"],
+    ["linen", "Towels & mats", "bath-mat towels"],
+  ],
+  outdoor: [
+    ["seating", "Outdoor seating & dining", "bistro-set hammock outdoor-sofa sun-lounger outdoor-dining"],
+    ["shade", "Shade & decking", "pergola parasol decking"],
+    ["ambience", "Lights, fire, rugs & planters", "string-lights planters fire-pit outdoor-rug"],
+  ],
+  storage: [
+    ["shelves", "Shelves & bookcases", "floating-shelves bookshelf bookcase etagere"],
+    ["cabinets", "Sideboards, media & shoe cabinets", "media-console sideboard media-unit shoe-cabinet laundry-cab"],
+    ["closets", "Wardrobes & closets", "built-in-wardrobe wardrobe closet-island"],
+    ["baskets", "Baskets & chests", "storage-baskets baskets blanket-chest"],
+  ],
+  architecture: [
+    ["openings", "Doors, windows & screens", "arch windows french-doors mashrabiya"],
+    ["ceilings", "Ceilings & beams", "beams coffered"],
+    ["features", "Fireplaces, stairs & built-ins", "fireplace staircase niche window-seat columns"],
+  ],
+  kids: [
+    ["kids-beds", "Kids beds", "house-bed"],
+    ["nursery", "Nursery", "crib changing glider"],
+    ["play", "Play & storage", "teepee kids-rug kids-table toy-cubbies"],
+    ["kids-walls", "Murals", "kids-mural"],
+  ],
+};

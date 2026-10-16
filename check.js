@@ -7,6 +7,9 @@ const sids=new Set(STYLES.map(s=>s.id));const pids=new Set(COLOR_PALETTES.map(p=
 let badTag=new Set(),badRoom=0,badCat=0,noRoom=0;
 ITEMS.forEach(i=>{i.styleTags.forEach(t=>{if(!sids.has(t))badTag.add(t)});i.roomTypes.forEach(r=>{if(!rids.has(r))badRoom++});if(!i.roomTypes.length)noRoom++;if(!cids.has(i.category))badCat++;});
 const badPal=STYLES.filter(s=>!pids.has(s.typicalPalette)).map(s=>s.id);
+const unmapped=ITEMS.filter(i=>i.sub==='other').map(i=>i.category+'/'+i.id);
+const subs={};ITEMS.forEach(i=>{const k=i.category+' › '+subName(i.category,i.sub);subs[k]=(subs[k]||0)+1});
+console.log('unmapped',unmapped.length,unmapped.slice(0,20));if(unmapped.length)process.exitCode=1;console.log(subs);
 console.log({items:ITEMS.length,generated:ITEMS.filter(i=>!i.sig).length,styles:STYLES.length,palettes:COLOR_PALETTES.length,dup,badTag:[...badTag],badRoom,badCat,noRoom,badPal,leftover:ITEMS.filter(i=>/\\{/.test(i.promptText)).length});
 const perStyle=STYLES.map(s=>{state.style=s.id;computeMatches();return [s.id,matchSet.size]}).sort((a,b)=>a[1]-b[1]);console.log('fewest matches',perStyle.slice(0,6));
 const perRoom=ROOM_TYPES.map(r=>[r.id,ITEMS.filter(i=>i.roomTypes.includes(r.id)).length]);console.log(perRoom.map(x=>x.join(':')).join(' '));
