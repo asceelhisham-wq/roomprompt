@@ -1,0 +1,1776 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>Interior Prompt Builder</title>
+<meta name="description" content="Pick a room, a style, a camera spot and pieces to build ready-to-use AI render and 2D plan prompts.">
+<style>
+/* Layout: three working columns on an oatmeal canvas — choose (left), browse (centre), output (right).
+   One moss accent, ochre only for "suits your style". System fonts so it runs offline. */
+:root {
+  --paper: #ece6d9;
+  --panel: #f7f3ea;
+  --panel-2: #fcf9f2;
+  --ink: #272019;
+  --ink-soft: #4b4335;
+  --muted: #776d5b;
+  --line: #ddd3bf;
+  --line-soft: #e7dfce;
+  --accent: #5f6f45;
+  --accent-deep: #45512f;
+  --accent-ink: #45512f;
+  --accent-soft: rgba(95, 111, 69, 0.12);
+  --on-accent: #fdfdf8;
+  --ochre: #a9772f;
+  --danger: #9a3b2e;
+  --plan-floor: #f4efe4;
+  --plan-wall: #3a3229;
+  --cone: rgba(95, 111, 69, 0.22);
+  --scrim: rgba(20, 16, 10, 0.4);
+  --shadow-sm: 0 1px 2px rgba(39, 32, 25, 0.06);
+  --shadow: 0 1px 2px rgba(39, 32, 25, 0.05), 0 10px 26px rgba(39, 32, 25, 0.08);
+  --r: 12px;
+  --r-sm: 8px;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #171511; --panel: #201d17; --panel-2: #28241d; --ink: #ece6d9; --ink-soft: #cfc6b4;
+    --muted: #a3987f; --line: #39342b; --line-soft: #322d25; --accent: #9fb272; --accent-deep: #b9cb8d;
+    --accent-ink: #c2d196; --accent-soft: rgba(159, 178, 114, 0.16); --on-accent: #171511; --ochre: #d6a258;
+    --danger: #e59485; --plan-floor: #28241d; --plan-wall: #cfc6b4; --cone: rgba(159, 178, 114, 0.25);
+    --scrim: rgba(0, 0, 0, 0.55);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4); --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 12px 30px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #171511; --panel: #201d17; --panel-2: #28241d; --ink: #ece6d9; --ink-soft: #cfc6b4;
+  --muted: #a3987f; --line: #39342b; --line-soft: #322d25; --accent: #9fb272; --accent-deep: #b9cb8d;
+  --accent-ink: #c2d196; --accent-soft: rgba(159, 178, 114, 0.16); --on-accent: #171511; --ochre: #d6a258;
+  --danger: #e59485; --plan-floor: #28241d; --plan-wall: #cfc6b4; --cone: rgba(159, 178, 114, 0.25);
+  --scrim: rgba(0, 0, 0, 0.55);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4); --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 12px 30px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; line-height: 1.15; text-wrap: balance; }
+button { font-family: inherit; color: inherit; cursor: pointer; }
+input, select { font-family: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--panel); }
+
+/* Top bar */
+.topbar { display: flex; align-items: center; gap: 14px; padding: 12px 22px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; }
+.brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.brand .logo { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
+.brand .logo .mark { color: var(--accent); }
+.brand .tag { font-size: 12.5px; color: var(--muted); }
+.topbar .spacer { flex: 1; }
+.btn { border: 1px solid var(--line); background: var(--panel-2); border-radius: var(--r-sm); padding: 8px 13px; font-size: 13.5px; font-weight: 550; display: inline-flex; align-items: center; gap: 8px; transition: border-color .12s, background .12s, transform .05s; }
+.btn:hover { border-color: var(--accent); }
+.btn:active { transform: translateY(1px); }
+.btn-accent { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn-accent:hover { background: var(--accent-deep); border-color: var(--accent-deep); }
+.btn-ghost { background: transparent; }
+.btn svg { width: 16px; height: 16px; }
+
+/* Columns */
+.app { display: grid; grid-template-columns: 330px minmax(0, 1fr) 400px; gap: 1px; background: var(--line); min-height: calc(100% - 57px); }
+.col { background: var(--paper); min-width: 0; display: flex; flex-direction: column; }
+.col-scroll { overflow-y: auto; padding: 18px 20px 28px; display: flex; flex-direction: column; gap: 24px; }
+.panel-title { font-size: 12px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.panel-title .hint { font-weight: 500; letter-spacing: 0; text-transform: none; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+
+/* Generic toggles */
+.room-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tog { border: 1px solid var(--line); background: var(--panel-2); border-radius: var(--r-sm); padding: 8px 10px; font-size: 12.5px; font-weight: 500; text-align: left; transition: border-color .12s, background .12s; }
+.tog:hover { border-color: var(--accent); }
+.tog[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.seg { display: flex; flex-wrap: wrap; gap: 5px; }
+.seg .tog { padding: 6px 10px; border-radius: 999px; font-size: 12px; }
+
+.size-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12.5px; color: var(--ink-soft); }
+.size-row input { width: 64px; border: 1px solid var(--line); background: var(--panel-2); border-radius: var(--r-sm); padding: 7px 8px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.size-row .x { color: var(--muted); }
+
+/* Search inputs */
+.search { position: relative; }
+.search input { width: 100%; border: 1px solid var(--line); background: var(--panel-2); border-radius: var(--r-sm); padding: 9px 12px 9px 32px; font-size: 13.5px; }
+.search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--muted); pointer-events: none; }
+.search.sm input { padding-block: 7px; font-size: 13px; }
+
+/* Style picker */
+.mini-chips { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+.mini-chip { border: 1px solid var(--line); background: var(--panel-2); border-radius: 999px; padding: 3px 9px; font-size: 11.5px; color: var(--ink-soft); }
+.mini-chip:hover { border-color: var(--accent); }
+.mini-chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.picked { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 10px; border-radius: var(--r-sm); background: var(--accent-soft); border: 1px solid var(--accent); font-size: 13px; }
+.picked b { color: var(--accent-ink); }
+.picked .grow { flex: 1; min-width: 0; }
+.picked button { border: none; background: transparent; color: var(--muted); font-size: 12px; text-decoration: underline; padding: 2px; }
+.style-list { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; padding-right: 4px; margin-top: 10px; }
+.style-card { border: 1px solid var(--line); background: var(--panel-2); border-radius: var(--r-sm); padding: 9px 11px; text-align: left; transition: border-color .12s, background .12s; }
+.style-card:hover { border-color: var(--accent); }
+.style-card[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.style-card .sc-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.style-card .sc-name { font-size: 13.5px; font-weight: 600; }
+.style-card[aria-pressed="true"] .sc-name { color: var(--accent-ink); }
+.style-card .sc-grp { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.style-card .sc-desc { font-size: 11.5px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+.empty-note { font-size: 12.5px; color: var(--muted); padding: 14px 8px; text-align: center; border: 1px dashed var(--line); border-radius: var(--r-sm); }
+
+/* Palettes */
+.palette-list { display: flex; flex-direction: column; gap: 5px; max-height: 240px; overflow-y: auto; padding-right: 4px; margin-top: 8px; }
+.palette-opt { border: 1px solid var(--line); background: var(--panel-2); border-radius: var(--r-sm); padding: 6px 9px; display: flex; align-items: center; gap: 10px; text-align: left; transition: border-color .12s; }
+.palette-opt:hover { border-color: var(--accent); }
+.palette-opt[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.swatch-row { display: inline-flex; border-radius: 5px; overflow: hidden; border: 1px solid var(--line); flex: 0 0 auto; }
+.swatch-row span { width: 16px; height: 18px; display: block; }
+.palette-opt .po-name { font-size: 12.5px; font-weight: 500; flex: 1; min-width: 0; }
+.palette-opt[aria-pressed="true"] .po-name { color: var(--accent-ink); font-weight: 600; }
+.po-tag { font-size: 10.5px; color: var(--ochre); font-weight: 600; white-space: nowrap; }
+.mood-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+/* Library */
+.lib-head { position: sticky; top: 0; background: var(--paper); padding: 18px 20px 12px; border-bottom: 1px solid var(--line-soft); z-index: 5; }
+.lib-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.lib-controls .search { flex: 1; min-width: 180px; }
+.toggle-all { font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; border: 1px solid var(--line); background: var(--panel-2); border-radius: 999px; padding: 7px 13px; font-weight: 500; }
+.toggle-all[aria-pressed="true"] { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); }
+.lib-meta { font-size: 12px; color: var(--muted); margin-top: 9px; font-variant-numeric: tabular-nums; }
+.lib-meta b { color: var(--ink-soft); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.chip { border: 1px solid var(--line); background: var(--panel-2); border-radius: 999px; padding: 4px 11px; font-size: 12px; font-weight: 500; color: var(--ink-soft); }
+.chip:hover { border-color: var(--accent); }
+.chip .n { color: var(--muted); font-variant-numeric: tabular-nums; margin-left: 4px; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.chip[aria-pressed="true"] .n { color: var(--line); }
+.lib-body { overflow-y: auto; padding: 14px 20px 28px; flex: 1; }
+.cat-section { margin-bottom: 22px; }
+.cat-section h3 { font-size: 12px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; padding-bottom: 7px; border-bottom: 1px solid var(--line-soft); display: flex; justify-content: space-between; }
+.cat-section h3 .n { font-weight: 500; font-variant-numeric: tabular-nums; }
+.item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+.item { position: relative; border: 1px solid var(--line); background: var(--panel-2); border-radius: var(--r-sm); padding: 10px 12px; text-align: left; transition: border-color .12s, background .12s, transform .05s; }
+.item:hover { border-color: var(--accent); transform: translateY(-1px); }
+.item .it-name { font-size: 13px; font-weight: 600; padding-right: 18px; }
+.item .it-fin { font-size: 11px; color: var(--accent-ink); font-weight: 600; margin-top: 1px; }
+.item .it-prompt { font-size: 11.5px; color: var(--muted); margin-top: 3px; line-height: 1.35; }
+.item[data-selected="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.item[data-selected="true"]::after { content: "✓"; position: absolute; top: 8px; right: 9px; width: 17px; height: 17px; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); border-radius: 50%; font-size: 11px; font-weight: 700; }
+.item[data-suggested="true"] { box-shadow: inset 3px 0 0 var(--ochre); }
+.item[data-selected="true"][data-suggested="true"] { box-shadow: inset 3px 0 0 var(--accent); }
+.more-btn { margin-top: 10px; width: 100%; justify-content: center; font-size: 12.5px; color: var(--ink-soft); }
+.lib-empty { color: var(--muted); font-size: 13.5px; padding: 30px 8px; text-align: center; border: 1px dashed var(--line); border-radius: var(--r); }
+
+/* Right column */
+.sel-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+.sel-count { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sel-count b { color: var(--ink); font-weight: 650; }
+.warn { border: 1px solid var(--danger); background: var(--panel-2); color: var(--danger); border-radius: var(--r-sm); padding: 8px 11px; font-size: 12.5px; margin-bottom: 10px; line-height: 1.4; }
+.sel-list { display: flex; flex-direction: column; gap: 5px; }
+.sel-item { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); background: var(--panel-2); border-radius: var(--r-sm); padding: 7px 10px; }
+.sel-item .si-text { flex: 1; min-width: 0; }
+.sel-item .si-name { font-size: 13px; font-weight: 550; }
+.sel-item .si-cat { font-size: 11px; color: var(--muted); }
+.sel-remove { border: none; background: transparent; color: var(--muted); width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center; flex: 0 0 auto; font-size: 15px; }
+.sel-remove:hover { color: var(--danger); background: var(--accent-soft); }
+.sel-empty { color: var(--muted); font-size: 13px; line-height: 1.5; border: 1px dashed var(--line); border-radius: var(--r); padding: 14px; text-align: center; }
+
+/* Camera */
+.cam-wrap { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 14px; align-items: start; }
+.cam-svg { width: 100%; max-width: 170px; height: auto; display: block; }
+.cam-svg .floor { fill: var(--plan-floor); stroke: var(--plan-wall); stroke-width: 3; }
+.cam-svg .door { stroke: var(--plan-floor); stroke-width: 5; }
+.cam-svg .swing { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 2; }
+.cam-svg .cone { fill: var(--cone); }
+.cam-svg .lbl { fill: var(--muted); font-size: 9px; font-family: var(--font-body); }
+.cam-svg .spot { fill: var(--panel-2); stroke: var(--muted); stroke-width: 1.5; cursor: pointer; }
+.cam-svg .spot:hover, .cam-svg .spot:focus-visible { stroke: var(--accent); outline: none; }
+.cam-svg .spot.on { fill: var(--accent); stroke: var(--accent); }
+.cam-svg .top-hatch { fill: var(--cone); }
+.cam-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.cam-label { font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+.cam-read { font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+.cam-read b { color: var(--ink); }
+
+/* Preview */
+.preview { border: 1px solid var(--line); border-radius: var(--r); background: var(--panel-2); padding: 15px; box-shadow: var(--shadow-sm); }
+.pv-kicker { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.pv-style { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-top: 2px; line-height: 1.1; }
+.pv-room { font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+.pv-swatches { display: inline-flex; border-radius: 6px; overflow: hidden; margin-top: 12px; border: 1px solid var(--line); }
+.pv-swatches span { width: 30px; height: 20px; display: block; }
+.pv-section-label { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 12px 0 6px; }
+.pv-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.pv-tag { font-size: 11.5px; border: 1px dashed var(--line); border-radius: 999px; padding: 2px 9px; color: var(--ink-soft); background: var(--paper); }
+.pv-items { font-size: 12.5px; color: var(--ink-soft); line-height: 1.6; }
+.pv-line { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.pv-line b { color: var(--ink-soft); font-weight: 600; }
+
+/* Output */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+.tab { border: none; background: transparent; padding: 7px 12px; font-size: 13px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab[aria-selected="true"] { color: var(--accent-ink); border-bottom-color: var(--accent); }
+.prompt-text { border: 1px solid var(--line); background: var(--panel-2); border-radius: var(--r-sm); padding: 12px 13px; font-size: 13.5px; line-height: 1.6; min-height: 120px; white-space: pre-wrap; color: var(--ink); overflow-wrap: anywhere; }
+.prompt-text.empty { color: var(--muted); }
+.prompt-meta { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.prompt-actions { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.prompt-actions .btn { flex: 1; justify-content: center; }
+.plan-modes { margin-bottom: 10px; }
+
+.mobile-tabs { display: none; }
+.scrim { display: none; position: fixed; inset: 0; background: var(--scrim); z-index: 35; }
+.scrim.show { display: block; }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(16px); background: var(--ink); color: var(--paper); padding: 10px 18px; border-radius: 999px; font-size: 13px; opacity: 0; transition: opacity .2s, transform .2s; z-index: 60; pointer-events: none; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 1180px) {
+  .app { grid-template-columns: 310px minmax(0, 1fr); }
+  .col-right { display: none; }
+  .col-right.open { display: flex; position: fixed; right: 0; top: 0; bottom: 0; width: 420px; max-width: 92vw; z-index: 40; box-shadow: var(--shadow); border-left: 1px solid var(--line); padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  #openRight { display: inline-flex; }
+}
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; }
+  .col-left { display: none; }
+  .col-left.open { display: flex; position: fixed; left: 0; top: 0; bottom: 0; width: 340px; max-width: 92vw; z-index: 40; box-shadow: var(--shadow); border-right: 1px solid var(--line); padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  #openLeft { display: inline-flex; }
+  .lib-head { padding: 14px 16px 10px; }
+  .lib-body { padding: 12px 16px 24px; }
+  .col-scroll { padding: 16px; }
+  .topbar { padding: 10px 16px; flex-wrap: wrap; gap: 8px; }
+  .brand .tag { display: none; }
+  .cam-wrap { grid-template-columns: 140px minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">Room<span class="mark">prompt</span></span>
+    <span class="tag">Room, style, camera spot and pieces in; render and floor-plan prompts out.</span>
+  </div>
+  <span class="spacer"></span>
+  <button class="btn btn-ghost mobile-tabs" id="openLeft" type="button">Room &amp; style</button>
+  <button class="btn btn-ghost mobile-tabs" id="openRight" type="button">Prompt</button>
+  <button class="btn btn-ghost" id="randomizeBtn" type="button" title="Pick a random style, palette, camera spot and matching pieces">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.4" fill="currentColor"/><circle cx="16" cy="16" r="1.4" fill="currentColor"/><circle cx="16" cy="8" r="1.4" fill="currentColor"/><circle cx="8" cy="16" r="1.4" fill="currentColor"/></svg>
+    Surprise me
+  </button>
+  <button class="btn btn-ghost" id="resetBtn" type="button">Reset</button>
+</header>
+
+<div class="scrim" id="scrim"></div>
+
+<main class="app">
+  <aside class="col col-left" id="colLeft">
+    <div class="col-scroll">
+      <section>
+        <div class="panel-title">Room <span class="hint" id="roomHint"></span></div>
+        <div class="room-grid" id="roomGrid"></div>
+        <div class="size-row">
+          <label for="sizeW">Size</label>
+          <input id="sizeW" type="number" min="1" max="60" step="0.5" inputmode="decimal" placeholder="W" aria-label="Room width in metres">
+          <span class="x">×</span>
+          <input id="sizeL" type="number" min="1" max="60" step="0.5" inputmode="decimal" placeholder="L" aria-label="Room length in metres">
+          <span class="x">m (optional)</span>
+        </div>
+      </section>
+
+      <section>
+        <div class="panel-title">Style <span class="hint" id="styleHint"></span></div>
+        <div class="search sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="search" id="styleSearch" placeholder="Search styles — japandi, majlis, deco, velvet…" aria-label="Search styles">
+        </div>
+        <div class="mini-chips" id="styleGroups"></div>
+        <div id="stylePicked"></div>
+        <div class="style-list" id="styleList"></div>
+      </section>
+
+      <section>
+        <div class="panel-title">Colour palette <span class="hint" id="paletteHint"></span></div>
+        <div class="search sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="search" id="paletteSearch" placeholder="Search palettes — sage, navy, sand…" aria-label="Search colour palettes">
+        </div>
+        <div class="palette-list" id="paletteList"></div>
+      </section>
+
+      <section>
+        <div class="panel-title">Lighting</div>
+        <div class="mood-grid" id="moodGrid"></div>
+      </section>
+    </div>
+  </aside>
+
+  <section class="col col-center">
+    <div class="lib-head">
+      <div class="lib-controls">
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="search" id="search" aria-label="Search pieces">
+        </div>
+        <button class="toggle-all" id="showAll" type="button" aria-pressed="false">Show all rooms</button>
+      </div>
+      <div class="lib-meta" id="libMeta"></div>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="lib-body" id="libBody"></div>
+  </section>
+
+  <aside class="col col-right" id="colRight">
+    <div class="col-scroll">
+      <section>
+        <div class="tabs" role="tablist" aria-label="Prompt type">
+          <button class="tab" role="tab" id="tab3d" aria-selected="true" aria-controls="promptText" type="button">3D render</button>
+          <button class="tab" role="tab" id="tab2d" aria-selected="false" aria-controls="promptText" type="button">2D version</button>
+        </div>
+        <div class="seg plan-modes" id="planModes" hidden></div>
+        <div class="prompt-text" id="promptText" role="tabpanel" aria-live="polite"></div>
+        <div class="prompt-actions">
+          <span class="prompt-meta" id="promptMeta"></span>
+          <button class="btn btn-accent" id="copyBtn" type="button">Copy prompt</button>
+        </div>
+      </section>
+
+      <section>
+        <div class="sel-head">
+          <div class="panel-title" style="margin:0">Your selection</div>
+          <span class="sel-count" id="selCount"></span>
+        </div>
+        <div id="warnSlot"></div>
+        <div class="sel-list" id="selList"></div>
+      </section>
+
+      <section>
+        <div class="panel-title">Camera spot <span class="hint">Click where the photo is taken</span></div>
+        <div class="cam-wrap">
+          <div id="camPlan"></div>
+          <div class="cam-side">
+            <div><div class="cam-label">Height</div><div class="seg" id="camHeight"></div></div>
+            <div><div class="cam-label">Lens</div><div class="seg" id="camLens"></div></div>
+          </div>
+        </div>
+        <div class="cam-read" id="camRead" style="margin-top:10px"></div>
+        <div style="margin-top:10px"><div class="cam-label">Aspect ratio</div><div class="seg" id="camRatio"></div></div>
+        <div style="margin-top:10px"><div class="cam-label">Prompt format</div><div class="seg" id="fmtSeg"></div></div>
+      </section>
+
+
+      <section>
+        <div class="panel-title">Preview</div>
+        <div class="preview" id="preview"></div>
+      </section>
+    </div>
+  </aside>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* 100 hand-written signature pieces from v1 */
+const SIGNATURE_ITEMS = [
+  /* furniture (14) */
+  { id: "sectional-sofa", name: "Sectional sofa", category: "furniture", roomTypes: ["living-room"], styleTags: ["scandinavian", "contemporary", "modern", "minimalist", "modern-luxury", "transitional"], promptText: "a cream bouclé sectional sofa" },
+  { id: "loveseat", name: "Loveseat", category: "furniture", roomTypes: ["living-room", "guest-room"], styleTags: ["mid-century", "art-deco", "hollywood-regency", "traditional", "maximalist"], promptText: "a tufted velvet loveseat" },
+  { id: "accent-armchair", name: "Accent armchair", category: "furniture", roomTypes: ["living-room", "bedroom", "home-office", "guest-room", "entrance-hall"], styleTags: ["mid-century", "modern", "contemporary", "boho", "scandinavian"], promptText: "a sculptural accent armchair" },
+  { id: "dining-chairs", name: "Dining chairs", category: "furniture", roomTypes: ["dining-room", "kitchen"], styleTags: ["scandinavian", "japandi", "farmhouse", "coastal", "rustic", "mediterranean"], promptText: "a set of woven dining chairs" },
+  { id: "coffee-table", name: "Coffee table", category: "furniture", roomTypes: ["living-room"], styleTags: ["rustic", "wabi-sabi", "mid-century", "boho", "farmhouse", "biophilic"], promptText: "a live-edge wood coffee table" },
+  { id: "dining-table", name: "Dining table", category: "furniture", roomTypes: ["dining-room", "kitchen"], styleTags: ["farmhouse", "scandinavian", "rustic", "traditional", "transitional"], promptText: "a solid oak dining table" },
+  { id: "platform-bed", name: "Platform bed", category: "furniture", roomTypes: ["bedroom", "guest-room"], styleTags: ["japandi", "minimalist", "scandinavian", "zen", "modern"], promptText: "a low oak platform bed" },
+  { id: "upholstered-bed", name: "Upholstered bed", category: "furniture", roomTypes: ["bedroom", "guest-room"], styleTags: ["modern-luxury", "hollywood-regency", "contemporary", "transitional", "art-deco"], promptText: "a channel-tufted upholstered bed" },
+  { id: "writing-desk", name: "Writing desk", category: "furniture", roomTypes: ["home-office", "bedroom"], styleTags: ["mid-century", "modern", "industrial", "traditional", "transitional"], promptText: "a walnut writing desk" },
+  { id: "wardrobe", name: "Wardrobe", category: "furniture", roomTypes: ["bedroom", "guest-room"], styleTags: ["modern-luxury", "contemporary", "art-deco", "traditional"], promptText: "a freestanding fluted wardrobe" },
+  { id: "entry-bench", name: "Entry bench", category: "furniture", roomTypes: ["entrance-hall", "bedroom"], styleTags: ["scandinavian", "farmhouse", "boho", "coastal", "japandi"], promptText: "a woven-seat entry bench" },
+  { id: "nightstand", name: "Nightstand", category: "furniture", roomTypes: ["bedroom", "guest-room"], styleTags: ["japandi", "scandinavian", "mid-century", "contemporary"], promptText: "a rounded oak nightstand" },
+  { id: "bar-stools", name: "Bar stools", category: "furniture", roomTypes: ["kitchen"], styleTags: ["industrial", "modern", "urban-chic", "farmhouse", "mid-century"], promptText: "leather counter bar stools" },
+  { id: "ottoman-pouf", name: "Ottoman pouf", category: "furniture", roomTypes: ["living-room", "bedroom", "kids-room", "balcony"], styleTags: ["boho", "moroccan", "tropical", "maximalist"], promptText: "a Moroccan leather pouf" },
+
+  /* lighting (11) */
+  { id: "pendant-light", name: "Pendant light", category: "lighting", roomTypes: ["kitchen", "dining-room", "living-room", "entrance-hall"], styleTags: ["modern", "contemporary", "scandinavian", "industrial", "japandi"], promptText: "a sculptural pendant light" },
+  { id: "chandelier", name: "Chandelier", category: "lighting", roomTypes: ["dining-room", "living-room", "bedroom", "entrance-hall"], styleTags: ["art-deco", "hollywood-regency", "victorian", "neoclassical", "modern-luxury", "gothic-revival"], promptText: "a crystal statement chandelier" },
+  { id: "floor-lamp", name: "Floor lamp", category: "lighting", roomTypes: ["living-room", "home-office", "bedroom", "guest-room"], styleTags: ["mid-century", "modern", "contemporary", "minimalist"], promptText: "an arched reading floor lamp" },
+  { id: "table-lamp", name: "Table lamp", category: "lighting", roomTypes: ["living-room", "bedroom", "home-office", "guest-room", "entrance-hall"], styleTags: ["traditional", "transitional", "contemporary", "coastal", "wabi-sabi"], promptText: "a ceramic-base table lamp" },
+  { id: "wall-sconce", name: "Wall sconces", category: "lighting", roomTypes: ["bathroom", "bedroom", "living-room", "entrance-hall", "dining-room"], styleTags: ["art-deco", "modern-luxury", "traditional", "industrial", "neoclassical"], promptText: "brass wall sconces" },
+  { id: "led-strip", name: "LED accent strip", category: "lighting", roomTypes: ["kitchen", "bedroom", "home-office", "kids-room", "living-room"], styleTags: ["modern", "contemporary", "urban-chic", "minimalist"], promptText: "warm hidden LED accent lighting" },
+  { id: "cove-lighting", name: "Cove lighting", category: "lighting", roomTypes: ["living-room", "bedroom", "home-office", "dining-room"], styleTags: ["modern", "modern-luxury", "contemporary", "minimalist"], promptText: "concealed cove lighting" },
+  { id: "recessed-lights", name: "Recessed downlights", category: "lighting", roomTypes: ["kitchen", "bathroom", "living-room", "home-office", "dining-room", "entrance-hall"], styleTags: ["modern", "minimalist", "contemporary", "industrial"], promptText: "recessed ceiling downlights" },
+  { id: "arc-lamp", name: "Arc lamp", category: "lighting", roomTypes: ["living-room", "dining-room"], styleTags: ["mid-century", "modern", "hollywood-regency", "contemporary"], promptText: "an oversized arc lamp" },
+  { id: "skylight", name: "Skylight", category: "lighting", roomTypes: ["kitchen", "bathroom", "bedroom", "living-room", "home-office"], styleTags: ["modern", "scandinavian", "minimalist", "biophilic", "loft"], promptText: "a flush ceiling skylight" },
+  { id: "paper-lantern", name: "Paper lantern", category: "lighting", roomTypes: ["bedroom", "living-room", "guest-room", "kids-room"], styleTags: ["japandi", "zen", "scandinavian", "wabi-sabi", "boho"], promptText: "a rice-paper lantern" },
+
+  /* decor (11) */
+  { id: "framed-art", name: "Framed art", category: "decor", roomTypes: ["living-room", "bedroom", "home-office", "dining-room", "entrance-hall", "guest-room"], styleTags: ["modern", "contemporary", "mid-century", "maximalist", "minimalist"], promptText: "a large framed abstract artwork" },
+  { id: "round-mirror", name: "Round mirror", category: "decor", roomTypes: ["entrance-hall", "bathroom", "bedroom", "living-room"], styleTags: ["art-deco", "contemporary", "modern-luxury", "boho", "coastal"], promptText: "a round brass-framed mirror" },
+  { id: "ceramic-vase", name: "Ceramic vase", category: "decor", roomTypes: ["living-room", "dining-room", "bedroom", "entrance-hall"], styleTags: ["wabi-sabi", "japandi", "scandinavian", "boho", "contemporary"], promptText: "a hand-thrown ceramic vase" },
+  { id: "sculpture", name: "Sculpture", category: "decor", roomTypes: ["living-room", "home-office", "entrance-hall"], styleTags: ["wabi-sabi", "modern", "minimalist", "modern-luxury", "contemporary"], promptText: "an organic stone sculpture" },
+  { id: "wall-clock", name: "Wall clock", category: "decor", roomTypes: ["living-room", "kitchen", "home-office", "entrance-hall"], styleTags: ["modern", "industrial", "mid-century", "minimalist"], promptText: "an oversized minimalist wall clock" },
+  { id: "candles", name: "Candles", category: "decor", roomTypes: ["living-room", "bedroom", "bathroom", "dining-room"], styleTags: ["rustic", "wabi-sabi", "traditional", "boho", "zen"], promptText: "a cluster of pillar candles" },
+  { id: "coffee-books", name: "Coffee-table books", category: "decor", roomTypes: ["living-room", "home-office", "guest-room"], styleTags: ["contemporary", "modern", "traditional", "maximalist", "mid-century"], promptText: "a styled stack of coffee-table books" },
+  { id: "photo-frames", name: "Photo frames", category: "decor", roomTypes: ["living-room", "bedroom", "home-office", "entrance-hall", "kids-room"], styleTags: ["traditional", "transitional", "contemporary", "country-cottage"], promptText: "a gallery wall of photo frames" },
+  { id: "tapestry", name: "Wall tapestry", category: "decor", roomTypes: ["living-room", "bedroom", "guest-room"], styleTags: ["boho", "moroccan", "tropical", "maximalist", "rustic"], promptText: "a woven wall tapestry" },
+  { id: "decorative-tray", name: "Decorative tray", category: "decor", roomTypes: ["living-room", "bedroom", "bathroom"], styleTags: ["modern-luxury", "contemporary", "hollywood-regency", "transitional"], promptText: "a styled decorative tray" },
+  { id: "floor-mirror", name: "Floor mirror", category: "decor", roomTypes: ["bedroom", "living-room", "entrance-hall", "guest-room"], styleTags: ["modern-luxury", "contemporary", "art-deco", "minimalist", "coastal"], promptText: "a leaning oversized floor mirror" },
+
+  /* flooring (8) */
+  { id: "oak-hardwood", name: "Oak hardwood", category: "flooring", roomTypes: ["living-room", "bedroom", "dining-room", "home-office", "entrance-hall", "guest-room"], styleTags: ["scandinavian", "traditional", "transitional", "contemporary", "farmhouse", "modern"], promptText: "wide-plank oak hardwood floors" },
+  { id: "walnut-floor", name: "Walnut flooring", category: "flooring", roomTypes: ["living-room", "bedroom", "dining-room", "home-office"], styleTags: ["mid-century", "traditional", "modern-luxury", "victorian"], promptText: "rich walnut plank flooring" },
+  { id: "herringbone-parquet", name: "Herringbone parquet", category: "flooring", roomTypes: ["living-room", "dining-room", "bedroom", "entrance-hall"], styleTags: ["art-deco", "neoclassical", "traditional", "modern-luxury", "victorian"], promptText: "a herringbone parquet floor" },
+  { id: "polished-concrete", name: "Polished concrete", category: "flooring", roomTypes: ["living-room", "kitchen", "home-office", "entrance-hall"], styleTags: ["industrial", "loft", "minimalist", "modern", "urban-chic"], promptText: "polished concrete floors" },
+  { id: "terrazzo", name: "Terrazzo", category: "flooring", roomTypes: ["kitchen", "bathroom", "entrance-hall", "dining-room"], styleTags: ["memphis", "modern", "contemporary", "art-deco"], promptText: "speckled terrazzo flooring" },
+  { id: "marble-tile", name: "Marble tile", category: "flooring", roomTypes: ["bathroom", "entrance-hall", "kitchen", "living-room"], styleTags: ["modern-luxury", "neoclassical", "hollywood-regency", "art-deco"], promptText: "veined marble tile floors" },
+  { id: "ceramic-tile", name: "Ceramic tile", category: "flooring", roomTypes: ["kitchen", "bathroom", "balcony", "entrance-hall"], styleTags: ["mediterranean", "moroccan", "farmhouse", "rustic", "coastal"], promptText: "handmade ceramic floor tile" },
+  { id: "wool-carpet", name: "Wool carpet", category: "flooring", roomTypes: ["bedroom", "home-office", "guest-room", "kids-room"], styleTags: ["traditional", "modern-luxury", "transitional", "contemporary"], promptText: "plush wool wall-to-wall carpet" },
+
+  /* walls (8) */
+  { id: "limewash-paint", name: "Limewash paint", category: "walls", roomTypes: ["living-room", "bedroom", "dining-room", "entrance-hall"], styleTags: ["wabi-sabi", "mediterranean", "rustic", "contemporary", "farmhouse"], promptText: "soft limewash-painted walls" },
+  { id: "venetian-plaster", name: "Venetian plaster", category: "walls", roomTypes: ["living-room", "bathroom", "bedroom", "entrance-hall"], styleTags: ["modern-luxury", "mediterranean", "neoclassical", "contemporary"], promptText: "polished Venetian plaster walls" },
+  { id: "shiplap", name: "Shiplap panelling", category: "walls", roomTypes: ["living-room", "bedroom", "kitchen", "bathroom", "entrance-hall"], styleTags: ["farmhouse", "coastal", "country-cottage", "rustic"], promptText: "white shiplap wall panelling" },
+  { id: "exposed-brick", name: "Exposed brick", category: "walls", roomTypes: ["living-room", "kitchen", "home-office", "dining-room"], styleTags: ["industrial", "loft", "urban-chic", "rustic"], promptText: "an exposed red brick wall" },
+  { id: "wallpaper", name: "Patterned wallpaper", category: "walls", roomTypes: ["living-room", "bedroom", "dining-room", "guest-room", "kids-room"], styleTags: ["maximalist", "victorian", "boho", "tropical", "country-cottage", "art-deco"], promptText: "botanical patterned wallpaper" },
+  { id: "wood-paneling", name: "Wood panelling", category: "walls", roomTypes: ["living-room", "bedroom", "home-office", "entrance-hall"], styleTags: ["japandi", "mid-century", "scandinavian", "modern", "biophilic"], promptText: "warm wood slat panelling" },
+  { id: "accent-wall", name: "Accent wall", category: "walls", roomTypes: ["living-room", "bedroom", "home-office", "kids-room"], styleTags: ["contemporary", "maximalist", "modern", "memphis"], promptText: "a colour-drenched accent wall" },
+  { id: "zellige-wall", name: "Zellige tile wall", category: "walls", roomTypes: ["kitchen", "bathroom"], styleTags: ["moroccan", "mediterranean", "modern-luxury", "contemporary"], promptText: "a glazed zellige tile wall" },
+
+  /* textiles (9) */
+  { id: "wool-rug", name: "Wool area rug", category: "textiles", roomTypes: ["living-room", "bedroom", "dining-room", "home-office", "guest-room"], styleTags: ["scandinavian", "contemporary", "transitional", "traditional", "boho"], promptText: "a hand-knotted wool area rug" },
+  { id: "persian-rug", name: "Persian rug", category: "textiles", roomTypes: ["living-room", "bedroom", "dining-room", "entrance-hall"], styleTags: ["boho", "traditional", "maximalist", "victorian", "mediterranean"], promptText: "a vintage Persian rug" },
+  { id: "linen-curtains", name: "Linen curtains", category: "textiles", roomTypes: ["living-room", "bedroom", "dining-room", "guest-room"], styleTags: ["scandinavian", "coastal", "contemporary", "minimalist", "japandi"], promptText: "floor-length linen curtains" },
+  { id: "roman-blinds", name: "Roman blinds", category: "textiles", roomTypes: ["kitchen", "bedroom", "home-office", "bathroom"], styleTags: ["traditional", "transitional", "farmhouse", "country-cottage"], promptText: "tailored roman blinds" },
+  { id: "throw-pillows", name: "Throw pillows", category: "textiles", roomTypes: ["living-room", "bedroom", "guest-room", "balcony"], styleTags: ["boho", "coastal", "contemporary", "maximalist", "tropical"], promptText: "layered throw pillows" },
+  { id: "throw-blanket", name: "Throw blanket", category: "textiles", roomTypes: ["living-room", "bedroom", "guest-room"], styleTags: ["scandinavian", "farmhouse", "rustic", "contemporary"], promptText: "a chunky knit throw blanket" },
+  { id: "velvet-cushions", name: "Velvet cushions", category: "textiles", roomTypes: ["living-room", "bedroom"], styleTags: ["hollywood-regency", "art-deco", "maximalist", "modern-luxury", "victorian"], promptText: "jewel-toned velvet cushions" },
+  { id: "boucle-upholstery", name: "Bouclé upholstery", category: "textiles", roomTypes: ["living-room", "bedroom", "home-office"], styleTags: ["contemporary", "modern-luxury", "scandinavian", "minimalist"], promptText: "soft bouclé upholstery" },
+  { id: "sheer-drapes", name: "Sheer drapes", category: "textiles", roomTypes: ["living-room", "bedroom", "balcony", "guest-room"], styleTags: ["coastal", "tropical", "contemporary", "minimalist"], promptText: "airy sheer drapes" },
+
+  /* plants (10) */
+  { id: "monstera", name: "Monstera", category: "plants", roomTypes: ["living-room", "home-office", "bedroom", "balcony", "entrance-hall"], styleTags: ["boho", "tropical", "biophilic", "contemporary", "scandinavian"], promptText: "a large monstera plant" },
+  { id: "fiddle-leaf", name: "Fiddle leaf fig", category: "plants", roomTypes: ["living-room", "home-office", "entrance-hall", "bedroom"], styleTags: ["contemporary", "modern", "biophilic", "coastal", "minimalist"], promptText: "a fiddle leaf fig tree" },
+  { id: "snake-plant", name: "Snake plant", category: "plants", roomTypes: ["bedroom", "home-office", "bathroom", "entrance-hall"], styleTags: ["minimalist", "modern", "biophilic", "japandi"], promptText: "a sculptural snake plant" },
+  { id: "pothos", name: "Pothos", category: "plants", roomTypes: ["kitchen", "bathroom", "home-office", "bedroom", "living-room"], styleTags: ["boho", "biophilic", "tropical", "contemporary"], promptText: "a trailing pothos vine" },
+  { id: "olive-tree", name: "Olive tree", category: "plants", roomTypes: ["living-room", "balcony", "entrance-hall", "kitchen"], styleTags: ["mediterranean", "rustic", "contemporary", "biophilic", "coastal"], promptText: "a potted olive tree" },
+  { id: "bird-of-paradise", name: "Bird of paradise", category: "plants", roomTypes: ["living-room", "home-office", "balcony", "entrance-hall"], styleTags: ["tropical", "biophilic", "contemporary", "coastal"], promptText: "a bird of paradise plant" },
+  { id: "succulents", name: "Succulents", category: "plants", roomTypes: ["kitchen", "home-office", "bathroom", "bedroom", "balcony"], styleTags: ["minimalist", "modern", "biophilic", "memphis"], promptText: "a small succulent arrangement" },
+  { id: "hanging-fern", name: "Hanging fern", category: "plants", roomTypes: ["bathroom", "balcony", "living-room", "kids-room"], styleTags: ["boho", "tropical", "biophilic", "country-cottage"], promptText: "a hanging Boston fern" },
+  { id: "zz-plant", name: "ZZ plant", category: "plants", roomTypes: ["home-office", "entrance-hall", "bedroom", "bathroom"], styleTags: ["minimalist", "modern", "contemporary", "biophilic"], promptText: "a glossy ZZ plant" },
+  { id: "bonsai", name: "Bonsai", category: "plants", roomTypes: ["home-office", "living-room", "bedroom", "entrance-hall"], styleTags: ["zen", "japandi", "wabi-sabi", "minimalist"], promptText: "a miniature bonsai tree" },
+
+  /* kitchen (8) */
+  { id: "kitchen-island", name: "Kitchen island", category: "kitchen", roomTypes: ["kitchen"], styleTags: ["modern", "farmhouse", "modern-luxury", "contemporary", "transitional"], promptText: "a marble-topped kitchen island" },
+  { id: "open-shelving", name: "Open shelving", category: "kitchen", roomTypes: ["kitchen"], styleTags: ["scandinavian", "farmhouse", "japandi", "coastal", "rustic"], promptText: "open wood kitchen shelving" },
+  { id: "quartz-counter", name: "Quartz countertop", category: "kitchen", roomTypes: ["kitchen", "bathroom"], styleTags: ["modern", "contemporary", "minimalist", "modern-luxury"], promptText: "quartz countertops" },
+  { id: "shaker-cabinets", name: "Shaker cabinets", category: "kitchen", roomTypes: ["kitchen"], styleTags: ["farmhouse", "traditional", "transitional", "country-cottage", "coastal"], promptText: "shaker-style cabinetry" },
+  { id: "range-hood", name: "Range hood", category: "kitchen", roomTypes: ["kitchen"], styleTags: ["mediterranean", "modern-luxury", "farmhouse", "contemporary"], promptText: "a statement plaster range hood" },
+  { id: "farmhouse-sink", name: "Farmhouse sink", category: "kitchen", roomTypes: ["kitchen"], styleTags: ["farmhouse", "country-cottage", "rustic", "coastal"], promptText: "an apron-front farmhouse sink" },
+  { id: "pot-rack", name: "Pot rack", category: "kitchen", roomTypes: ["kitchen"], styleTags: ["rustic", "farmhouse", "industrial", "traditional"], promptText: "a hanging iron pot rack" },
+  { id: "island-pendants", name: "Island pendants", category: "kitchen", roomTypes: ["kitchen"], styleTags: ["modern", "industrial", "farmhouse", "contemporary", "mid-century"], promptText: "a pair of pendants over the island" },
+
+  /* bathroom (8) */
+  { id: "freestanding-tub", name: "Freestanding tub", category: "bathroom", roomTypes: ["bathroom"], styleTags: ["modern-luxury", "contemporary", "scandinavian", "art-deco", "minimalist"], promptText: "a sculptural freestanding bathtub" },
+  { id: "walk-in-shower", name: "Walk-in shower", category: "bathroom", roomTypes: ["bathroom"], styleTags: ["modern", "minimalist", "contemporary", "modern-luxury"], promptText: "a frameless walk-in shower" },
+  { id: "vessel-sink", name: "Vessel sink", category: "bathroom", roomTypes: ["bathroom"], styleTags: ["wabi-sabi", "rustic", "contemporary", "japandi", "mediterranean"], promptText: "a stone vessel sink" },
+  { id: "double-vanity", name: "Double vanity", category: "bathroom", roomTypes: ["bathroom"], styleTags: ["modern", "contemporary", "modern-luxury", "minimalist"], promptText: "a floating double vanity" },
+  { id: "backlit-mirror", name: "Backlit mirror", category: "bathroom", roomTypes: ["bathroom"], styleTags: ["modern", "contemporary", "minimalist", "modern-luxury"], promptText: "a backlit LED mirror" },
+  { id: "towel-rail", name: "Heated towel rail", category: "bathroom", roomTypes: ["bathroom"], styleTags: ["modern", "contemporary", "transitional", "modern-luxury"], promptText: "a heated towel rail" },
+  { id: "rainfall-shower", name: "Rainfall showerhead", category: "bathroom", roomTypes: ["bathroom"], styleTags: ["modern-luxury", "contemporary", "modern", "zen"], promptText: "a rainfall showerhead" },
+  { id: "bath-mat", name: "Bath mat", category: "bathroom", roomTypes: ["bathroom"], styleTags: ["scandinavian", "coastal", "contemporary", "farmhouse"], promptText: "a textured cotton bath mat" },
+
+  /* outdoor (6) */
+  { id: "bistro-set", name: "Bistro set", category: "outdoor", roomTypes: ["balcony", "entrance-hall"], styleTags: ["mediterranean", "country-cottage", "rustic", "farmhouse"], promptText: "a wrought-iron bistro set" },
+  { id: "hammock", name: "Hammock", category: "outdoor", roomTypes: ["balcony", "kids-room"], styleTags: ["boho", "tropical", "coastal", "biophilic"], promptText: "a woven hanging hammock" },
+  { id: "outdoor-sofa", name: "Outdoor sofa", category: "outdoor", roomTypes: ["balcony"], styleTags: ["coastal", "tropical", "contemporary", "boho", "modern"], promptText: "a weatherproof rattan outdoor sofa" },
+  { id: "planters", name: "Planters", category: "outdoor", roomTypes: ["balcony", "entrance-hall"], styleTags: ["mediterranean", "biophilic", "contemporary", "coastal"], promptText: "oversized outdoor planters" },
+  { id: "string-lights", name: "String lights", category: "outdoor", roomTypes: ["balcony"], styleTags: ["boho", "coastal", "country-cottage", "tropical", "farmhouse"], promptText: "warm festoon string lights" },
+  { id: "pergola", name: "Pergola", category: "outdoor", roomTypes: ["balcony"], styleTags: ["mediterranean", "coastal", "rustic", "biophilic"], promptText: "a timber pergola overhead" },
+
+  /* storage (7) */
+  { id: "floating-shelves", name: "Floating shelves", category: "storage", roomTypes: ["living-room", "bedroom", "home-office", "kitchen", "bathroom", "kids-room"], styleTags: ["scandinavian", "minimalist", "modern", "contemporary", "industrial"], promptText: "minimal floating shelves" },
+  { id: "built-in-wardrobe", name: "Built-in wardrobe", category: "storage", roomTypes: ["bedroom", "guest-room"], styleTags: ["modern", "modern-luxury", "contemporary", "minimalist", "transitional"], promptText: "a seamless built-in wardrobe" },
+  { id: "storage-baskets", name: "Storage baskets", category: "storage", roomTypes: ["living-room", "bedroom", "bathroom", "kids-room", "entrance-hall"], styleTags: ["boho", "scandinavian", "coastal", "farmhouse", "japandi"], promptText: "woven storage baskets" },
+  { id: "bookshelf", name: "Bookshelf", category: "storage", roomTypes: ["living-room", "home-office", "bedroom"], styleTags: ["traditional", "industrial", "mid-century", "contemporary", "maximalist"], promptText: "a floor-to-ceiling bookshelf" },
+  { id: "media-console", name: "Media console", category: "storage", roomTypes: ["living-room", "bedroom"], styleTags: ["mid-century", "modern", "contemporary", "scandinavian", "minimalist"], promptText: "a low media console" },
+  { id: "sideboard", name: "Sideboard", category: "storage", roomTypes: ["dining-room", "living-room", "entrance-hall"], styleTags: ["mid-century", "art-deco", "contemporary", "modern-luxury", "transitional"], promptText: "a fluted wood sideboard" },
+  { id: "shoe-cabinet", name: "Shoe cabinet", category: "storage", roomTypes: ["entrance-hall"], styleTags: ["scandinavian", "minimalist", "modern", "contemporary"], promptText: "a slim shoe cabinet" },
+];
+
+</script>
+<script>
+/* data2.js — v2 catalogue. Compact rows, expanded at load by app.js.
+   Style list compiled from current interior-style guides (Redfin, Krea, Genroom,
+   &Academy, Centris, Qanvast) plus period and regional styles. */
+
+const ROOM_TYPES = [
+  { id: "living-room",    name: "Living room",    code: "L" },
+  { id: "bedroom",        name: "Bedroom",        code: "B" },
+  { id: "kitchen",        name: "Kitchen",        code: "K" },
+  { id: "bathroom",       name: "Bathroom",       code: "T" },
+  { id: "dining-room",    name: "Dining room",    code: "D" },
+  { id: "home-office",    name: "Home office",    code: "O" },
+  { id: "kids-room",      name: "Kids room",      code: "C" },
+  { id: "balcony",        name: "Balcony",        code: "P" },
+  { id: "entrance-hall",  name: "Entrance hall",  code: "E" },
+  { id: "guest-room",     name: "Guest room",     code: "G" },
+  { id: "majlis",         name: "Majlis",         code: "M" },
+  { id: "walk-in-closet", name: "Walk-in closet", code: "W" },
+  { id: "home-cinema",    name: "Home cinema",    code: "H" },
+  { id: "laundry-room",   name: "Laundry room",   code: "Y" },
+  { id: "nursery",        name: "Nursery",        code: "N" },
+];
+
+const STYLE_GROUPS = [
+  { id: "M", name: "Modern & minimal" },
+  { id: "N", name: "Nordic & Japanese" },
+  { id: "C", name: "Classic & period" },
+  { id: "G", name: "Global & regional" },
+  { id: "R", name: "Rustic & natural" },
+  { id: "B", name: "Bold & glam" },
+  { id: "U", name: "Industrial & urban" },
+  { id: "T", name: "Trending now" },
+];
+
+/* [id, name, group, palette, materials, keywords, description] */
+const STYLE_ROWS = [
+  ["modern","Modern","M","cool-neutrals","steel, glass, oak","clean lines, open plan, geometric, uncluttered","Crisp geometry, open layouts and a restrained neutral palette with confident accents."],
+  ["contemporary","Contemporary","M","warm-neutrals","bouclé, oak, brass","soft curves, tactile, layered, understated","An of-the-moment mix of soft curves, warm neutrals and tactile materials."],
+  ["minimalist","Minimalist","M","monochrome","concrete, glass, white oak","spare, uncluttered, essential, calm","A pared-back space where every object earns its place."],
+  ["mid-century","Mid-Century Modern","M","mid-century","walnut, leather, brass","tapered legs, organic forms, retro, graphic","Organic 1950s–60s forms, warm woods and tapered legs."],
+  ["modern-luxury","Modern Luxury","M","quiet-luxury","marble, brass, velvet","sleek, plush, refined, hotel-like","Sleek, high-end calm with marble, warm metals and plush materials."],
+  ["transitional","Transitional","M","greige","oak, linen, brushed nickel","balanced, tailored, classic-modern, soft","A middle ground between traditional comfort and modern lines."],
+  ["organic-modern","Organic Modern","M","stone-linen","oak, travertine, linen, bouclé","rounded edges, natural textures, earthy, calm","Modern shapes softened with raw wood, stone and rounded edges."],
+  ["warm-minimal","Warm Minimalism","M","mushroom","oak, limewash, linen","soft minimal, warm white, tonal, quiet","Minimalism with warmth: tonal beiges, soft textures, gentle light."],
+  ["soft-modern","Soft Modern","M","blush-clay","bouclé, mohair, travertine","curved furniture, rounded, cocooning, plush","Curvy, cocooning furniture in soft tonal fabrics."],
+  ["bauhaus","Bauhaus","M","primary-bauhaus","chrome, leather, glass","tubular steel, primary colours, functional, geometric","Function-first 1920s design: tubular steel and primary colour."],
+  ["brutalist","Brutalist","M","concrete-grey","concrete, blackened steel, travertine","raw concrete, monolithic, sculptural, heavy","Monolithic, sculptural forms in raw concrete and stone."],
+  ["high-tech","High-Tech","M","nordic-frost","chrome, glass, white lacquer","exposed structure, sleek, technical, glossy","Engineering on show: chrome, glass and exposed structure."],
+  ["futuristic","Futuristic","M","nordic-frost","white lacquer, chrome, acrylic","seamless curves, integrated LED, sci-fi, glossy","Seamless curves, glossy white surfaces and integrated light."],
+  ["space-age","Space Age","M","seventies","white lacquer, chrome, acrylic","pod chairs, orange, rounded, retro-futurist","1960s retro-futurism: pod chairs, moulded plastic and orange."],
+  ["postmodern","Postmodern","M","memphis-pop","terrazzo, lacquer, laminate","playful, columns, pastel, ironic","Playful, ironic forms mixing classical references with colour."],
+  ["memphis","Memphis Design","M","memphis-pop","laminate, terrazzo, lacquer","squiggles, primary colour, graphic, bold","Playful 1980s shapes, primary colour and graphic squiggles."],
+  ["monochromatic","Monochromatic","M","greige","wool, linen, plaster","tone-on-tone, single colour, layered textures","One colour in many shades, layered through texture."],
+  ["california-modern","California Modern","M","sunbleached","white oak, linen, terracotta","indoor-outdoor, sunlit, relaxed, glass walls","Sunlit indoor-outdoor living with pale wood and relaxed textures."],
+  ["desert-modern","Desert Modern","M","desert-sunset","plaster, travertine, leather","sun-baked, earthy, low-slung, sculptural","Sun-baked plaster, earthy tones and low, sculptural furniture."],
+
+  ["scandinavian","Scandinavian","N","warm-neutrals","pale oak, wool, linen","light wood, white walls, cosy, functional, natural light","Light, airy rooms with pale wood, clean lines and cosy simplicity."],
+  ["japandi","Japandi","N","earth-tones","oak, paper, linen, bamboo","minimal, natural, muted, serene, low furniture","A calm blend of Japanese restraint and Scandinavian warmth."],
+  ["zen","Zen","N","tatami","bamboo, stone, linen","serene, uncluttered, soft light, balanced","Serene, uncluttered calm with natural materials and soft light."],
+  ["wabi-sabi","Wabi-Sabi","N","earth-tones","raw plaster, aged wood, stoneware","imperfect, handmade, raw, textured","Quiet beauty in imperfection: raw plaster, aged wood, handmade texture."],
+  ["hygge","Hygge","N","warm-neutrals","wool, sheepskin, pale oak","candlelight, cosy, knitted, snug","Danish cosiness: candlelight, knits and soft layered textiles."],
+  ["danish-modern","Danish Modern","N","forest-walnut","teak, leather, wool","craftsmanship, sculptural chairs, teak","Crafted teak furniture and sculptural chairs from 1950s Denmark."],
+  ["dark-scandi","Dark Scandi","N","nordic-noir","ebonised oak, wool, blackened steel","black walls, moody, minimal","Scandinavian simplicity in charcoal, black and smoked wood."],
+  ["swedish-gustavian","Swedish Gustavian","N","gustavian","painted wood, linen, gilt","grey-blue, painted furniture, 18th century","Pale painted furniture and soft grey-blues from 18th-century Sweden."],
+  ["japanese-traditional","Japanese Traditional","N","tatami","tatami, paper, cedar","shoji screens, low tables, tokonoma","Tatami floors, shoji screens and low, ordered living."],
+  ["korean-hanok","Korean Hanok","N","hanok","paper, pine, clay","ondol floor, wooden beams, paper doors","Timber-beamed calm with paper screens and floor-level living."],
+  ["chinese-modern","Modern Chinese","N","lacquer-red","rosewood, lacquer, silk","lattice screens, red lacquer, symmetry","Lattice screens, dark rosewood and red lacquer, simplified."],
+
+  ["traditional","Traditional","C","warm-neutrals","mahogany, wool, leather","classic, symmetrical, rich textiles, refined","Timeless, symmetrical rooms with classic wood and rich textiles."],
+  ["victorian","Victorian","C","jewel-tones","dark wood, velvet, brass","ornate, patterned, period, layered","Ornate, layered period rooms with dark wood and deep colour."],
+  ["neoclassical","Neoclassical","C","warm-neutrals","marble, plaster, gilt","classical, symmetry, columns, elegant","Restrained classical elegance: columns, symmetry, marble."],
+  ["gothic-revival","Gothic Revival","C","midnight-moody","dark oak, wrought iron, velvet","pointed arches, dramatic, ornate, moody","Dramatic, dark romance with pointed arches and ornate detail."],
+  ["georgian","Georgian","C","heritage-green","mahogany, plaster, brass","symmetry, panelling, sash windows","Symmetrical 18th-century rooms with panelling and sash windows."],
+  ["regency","Regency","C","heritage-green","mahogany, silk, gilt","stripes, sabre legs, elegant","Elegant 1810s style with stripes, sabre legs and gilt."],
+  ["baroque","Baroque","C","burgundy-gold","gilt, velvet, marble","ornate, gilded, grand, dramatic","Grand, gilded ornament and deep, dramatic colour."],
+  ["rococo","Rococo","C","rococo-pastel","gilt, silk, painted wood","curving, pastel, ornate, playful","Light, curving ornament in pastels and gold."],
+  ["art-nouveau","Art Nouveau","C","art-nouveau","wrought iron, stained glass, walnut","whiplash curves, floral, organic","Flowing organic lines, stained glass and floral motifs."],
+  ["arts-and-crafts","Arts and Crafts","C","forest-walnut","oak, copper, wool","handcrafted, Morris pattern, joinery","Honest handcraft, oak joinery and Morris-style pattern."],
+  ["craftsman","Craftsman","C","earth-tones","quarter-sawn oak, copper, stone","built-ins, tapered columns, warm","Built-ins, tapered columns and warm quarter-sawn oak."],
+  ["colonial","American Colonial","C","heritage-green","pine, brass, wool","symmetry, wainscoting, simple","Simple, symmetrical rooms with pine, brass and wainscoting."],
+  ["federal","Federal","C","navy-brass","mahogany, brass, silk","oval motifs, refined, symmetrical","Refined post-revolution style with oval motifs and mahogany."],
+  ["edwardian","Edwardian","C","sage-cream","painted wood, linen, brass","airy, floral, picture rails","Lighter, airier period rooms with florals and picture rails."],
+  ["tudor","Tudor","C","forest-walnut","dark oak, stone, wrought iron","half-timber, leaded windows, beams","Dark oak beams, leaded windows and heavy stone."],
+  ["english-country","English Country","C","cottage-floral","chintz, oak, wool","chintz, layered, collected, cosy","Collected, comfortable rooms with chintz and old oak."],
+  ["french-country","French Country","C","provence","painted wood, toile, terracotta","toile, provençal, distressed, lavender","Provençal warmth: toile, distressed paint and terracotta."],
+  ["parisian","Parisian","C","parisian","parquet, marble, brass","mouldings, haussmann, chic, old and new","Haussmann mouldings and parquet with chic modern pieces."],
+  ["shaker","Shaker","C","sage-cream","cherry, painted wood, cotton","peg rails, simple, utilitarian","Utilitarian simplicity: peg rails and plain, honest wood."],
+  ["biedermeier","Biedermeier","C","butter-yellow","cherry, birch, silk","blond wood, restrained, bourgeois","Restrained, blond-wood comfort from 1820s Vienna."],
+  ["italian-renaissance","Italian Renaissance","C","tuscan","walnut, marble, velvet","frescoes, coffered ceilings, grand","Frescoes, coffered ceilings and rich walnut."],
+  ["empire","French Empire","C","burgundy-gold","mahogany, gilt, silk","laurel motifs, columns, grand","Napoleonic grandeur with mahogany and gilt bronze."],
+
+  ["mediterranean","Mediterranean","G","terracotta-sand","terracotta, plaster, olive wood","arches, plaster, warm, tile","Sun-warmed terracotta, plaster walls, gentle arches and rustic wood."],
+  ["moroccan","Moroccan","G","jewel-tones","zellige, brass, carved wood","jewel tones, pattern, lanterns, ornate","Richly patterned rooms with zellige, carved wood and lanterns."],
+  ["coastal","Coastal","G","coastal-blue","driftwood, linen, rattan","airy, blue and white, relaxed, bright","Breezy, light-filled rooms with soft blues and natural textures."],
+  ["tropical","Tropical","G","tropical-green","rattan, teak, linen","palm, lush, greenery, breezy","Lush, resort-like rooms with rattan, palm prints and greenery."],
+  ["tuscan","Tuscan","G","tuscan","terracotta, travertine, wrought iron","rustic Italian, olive, beams","Sun-warmed Italian farmhouse: terracotta, beams and iron."],
+  ["spanish-revival","Spanish Revival","G","spanish","terracotta, wrought iron, talavera","arches, stucco, painted tile","White stucco, arches and painted tile."],
+  ["greek-island","Greek Island","G","santorini","whitewash, cobalt, stone","whitewashed, blue accents, built-in seating","Whitewashed curves and built-in seating with sea-blue accents."],
+  ["arabian-majlis","Arabian Majlis","G","arabian-sand","velvet, brass, carved wood, jacquard","floor seating, arabesque, hospitality","Low floor seating, brass and carved wood built for hospitality."],
+  ["najdi","Najdi","G","najdi","mud plaster, palm wood, painted wood","triangular openings, mud brick, geometric doors","Saudi heritage: mud-plaster walls, palm beams and painted doors."],
+  ["modern-arabic","Modern Arabic","G","arabian-sand","travertine, brass, mashrabiya","arches, geometric screens, minimal","Clean modern rooms with arches and geometric screens."],
+  ["indian","Indian","G","indian-spice","teak, silk, brass","block print, jewel colours, jharokha","Carved wood, block prints and saturated jewel colour."],
+  ["balinese","Balinese","G","tropical-green","teak, bamboo, stone","open-air, carved, resort","Open-air resort living with teak, stone and carving."],
+  ["british-colonial","British Colonial","G","colonial-tropic","dark wood, cane, linen","campaign furniture, palms, plantation","Dark wood, cane and palms from the plantation era."],
+  ["african-modern","African Modern","G","african-earth","mud cloth, carved wood, jute","tribal pattern, carved stools, sculptural","Mud cloth, carved stools and earthy sculptural pieces."],
+  ["mexican-hacienda","Mexican Hacienda","G","spanish","talavera, adobe, wrought iron","courtyard, bold colour, hand-painted tile","Courtyard living with adobe, iron and hand-painted tile."],
+  ["southwestern","Southwestern","G","desert-sunset","adobe, leather, wool","Navajo pattern, cactus, terracotta","Adobe, woven wool and desert colour."],
+  ["hamptons","Hamptons","G","coastal-blue","white oak, linen, rattan","crisp white, navy, relaxed luxury","Crisp whites, navy and relaxed beach-house luxury."],
+  ["nautical","Nautical","G","navy-brass","teak, rope, brass","stripes, rope, portholes","Navy stripes, rope and brass ship details."],
+  ["chinoiserie","Chinoiserie","G","chinoiserie","lacquer, porcelain, silk","blue and white, birds, pagodas","Blue-and-white porcelain and hand-painted bird wallpaper."],
+  ["turkish","Ottoman Turkish","G","iznik","iznik tile, kilim, brass","kilims, low divans, tilework","Low divans, kilims and Iznik tilework."],
+
+  ["rustic","Rustic","R","earth-tones","rough timber, stone, wrought iron","timber, rough, earthy, handcrafted","Rugged natural materials: rough-hewn timber, stone and warmth."],
+  ["farmhouse","Farmhouse","R","warm-neutrals","reclaimed wood, linen, galvanised metal","shiplap, cosy, soft white, apron sink","Warm country comfort with shiplap, reclaimed wood and soft whites."],
+  ["modern-farmhouse","Modern Farmhouse","R","black-white-oak","white oak, blackened steel, shiplap","board and batten, black accents, clean","Farmhouse warmth with crisp black-and-white contrast."],
+  ["country-cottage","Country Cottage","R","pastel","painted wood, cotton, ceramic","floral, painted wood, lived-in","Charming, soft, lived-in comfort with florals and painted wood."],
+  ["biophilic","Biophilic","R","biophilic-moss","reclaimed wood, stone, greenery","plants, natural light, living wall, organic","Nature brought indoors: plants, natural light and organic materials."],
+  ["boho","Bohemian","R","earth-tones","rattan, jute, macramé","layered, eclectic, plants, pattern","A layered, free-spirited mix of patterns, plants and global textiles."],
+  ["cabin","Cabin / Lodge","R","forest-walnut","log timber, plaid wool, stone","log walls, fireplace, plaid","Log walls, plaid wool and a stone fireplace."],
+  ["alpine-chalet","Alpine Chalet","R","chalet","larch, sheepskin, stone","timber-lined, sheepskin, fireplace","Timber-lined warmth with sheepskin and a roaring fire."],
+  ["shabby-chic","Shabby Chic","R","rococo-pastel","distressed paint, linen, lace","distressed, faded florals, romantic","Distressed white paint, faded florals and soft romance."],
+  ["cottagecore","Cottagecore","R","cottage-floral","painted wood, gingham, dried flowers","floral, handmade, vintage, pastoral","Pastoral nostalgia: florals, gingham and dried flowers."],
+  ["eco","Eco / Sustainable","R","biophilic-moss","reclaimed wood, cork, hemp","upcycled, natural, low-impact","Reclaimed, low-impact materials and natural finishes."],
+  ["western-ranch","Western Ranch","R","saddle-leather","leather, reclaimed wood, cowhide","saddle leather, rugged, cowhide","Rugged ranch style with saddle leather and cowhide."],
+  ["jungalow","Jungalow","R","tropical-green","rattan, macramé, cane","jungle, plants everywhere, patterned","Boho maximalism packed with plants and pattern."],
+
+  ["art-deco","Art Deco","B","jewel-tones","brass, lacquer, marble","geometric, glamorous, symmetrical, bold","Glamorous geometry, lacquer, brass and bold symmetry."],
+  ["hollywood-regency","Hollywood Regency","B","glam-blush","mirror, velvet, brass","glossy, mirrored, bold colour, dramatic","Theatrical, high-gloss luxury with mirrored surfaces and vivid colour."],
+  ["maximalist","Maximalist","B","eclectic-mix","velvet, lacquer, mixed pattern","bold, pattern on pattern, abundant","More is more: bold colour, pattern on pattern and curated abundance."],
+  ["glam","Glam","B","glam-blush","velvet, gold, mirror","metallics, mirrored, luxe","Metallics, mirrored surfaces and plush velvet."],
+  ["eclectic","Eclectic","B","eclectic-mix","mixed woods, velvet, brass","curated, mixed eras, layered","Mixed eras and finds held together by a clear eye."],
+  ["dark-moody","Dark and Moody","B","midnight-moody","velvet, smoked glass, walnut","dark walls, low light, dramatic","Deep, colour-drenched walls and low, dramatic light."],
+  ["dark-academia","Dark Academia","B","burgundy-gold","leather, dark oak, tweed","libraries, antique books, scholarly","Book-lined, scholarly rooms in leather and dark oak."],
+  ["pop-art","Pop Art","B","memphis-pop","lacquer, acrylic, vinyl","comic colour, graphic, bold art","Comic-strip colour and graphic, bold art."],
+  ["seventies","70s Revival","B","seventies","rattan, velvet, shag wool","sunken lounge, orange, brown, shag","Sunken lounges, shag rugs and orange-brown warmth."],
+
+  ["industrial","Industrial","U","monochrome","blackened steel, concrete, reclaimed wood","exposed brick, steel, raw, utilitarian","Raw warehouse character: brick, steel, concrete and salvaged wood."],
+  ["loft","Loft","U","cool-neutrals","concrete, steel, oak","open plan, high ceilings, brick, ductwork","Open, high-ceilinged urban space mixing raw structure and comfort."],
+  ["urban-chic","Urban Chic","U","monochrome","blackened steel, oak, leather","polished, city, tailored, moody","Polished city style mixing sleek pieces with warm industrial edges."],
+  ["steampunk","Steampunk","U","industrial-rust","copper, leather, brass","gears, pipes, Victorian industry","Victorian industry: copper pipes, gears and leather."],
+  ["cyberpunk","Cyberpunk","U","cyber-neon","chrome, neon, glass","neon light, dark, futuristic city","Neon-lit dark rooms with chrome and glass."],
+  ["brownstone","Brooklyn Brownstone","U","earth-tones","exposed brick, walnut, plaster","prewar details, brick, bookshelves","Prewar mouldings, exposed brick and full bookshelves."],
+  ["urban-modern","Urban Modern","U","greige","concrete, leather, smoked glass","city apartment, sleek, neutral","Sleek, neutral city-apartment style."],
+  ["scandustrial","Scandustrial","U","concrete-grey","pale oak, blackened steel, concrete","Scandi meets industrial, light and raw","Light Scandinavian wood with black steel and concrete."],
+
+  ["coastal-grandmother","Coastal Grandmother","T","sunbleached","linen, rattan, white oak","breezy, hydrangeas, relaxed elegance","Breezy linen, rattan and hydrangeas, relaxed and elegant."],
+  ["grandmillennial","Grandmillennial","T","cottage-floral","chintz, wicker, needlepoint","granny chic, florals, skirted tables","Granny chic: chintz, skirted tables and needlepoint."],
+  ["quiet-luxury","Quiet Luxury","T","quiet-luxury","cashmere, walnut, travertine","understated, tailored, camel, cream","Understated, tailored rooms in camel, cream and fine materials."],
+  ["dopamine","Dopamine Decor","T","dopamine","lacquer, velvet, acrylic","joyful colour, playful, saturated","Joyful saturated colour and playful shapes."],
+  ["y2k","Y2K","T","y2k","acrylic, chrome, faux fur","bubble shapes, iridescent, pink, chrome","Bubble shapes, chrome and iridescent pastels."],
+  ["new-traditional","New Traditional","T","heritage-green","oak, linen, brass","classic made fresh, lighter, tailored","Classic furniture made fresh with lighter colour."],
+  ["modern-mediterranean","Modern Mediterranean","T","stone-linen","limewash, travertine, oak","arches, limewash, minimal","Limewash and arches pared back to calm modern lines."],
+  ["vintage-modern","Vintage Modern","T","mid-century","walnut, leather, linen","vintage finds, modern, collected","Vintage finds mixed with clean modern pieces."],
+  ["spa-retreat","Spa Retreat","T","stone-linen","limestone, teak, linen","spa-like, calm, wellness","Hotel-spa calm with stone, teak and soft light."],
+  ["gaming-setup","Gaming Setup","T","cyber-neon","blackened steel, acoustic felt, LED","RGB lighting, multi-monitor, dark","Dark, RGB-lit rooms built around a gaming setup."],
+];
+
+/* [id, name, "hex hex hex hex hex"] */
+const PALETTE_ROWS = [
+  ["warm-neutrals","Warm neutrals","#efe7da #d9c7ad #b89b74 #8a6f4e #5a4632"],
+  ["cool-neutrals","Cool neutrals","#eef0f1 #cfd6d8 #9aa6ab #5f6b70 #343c40"],
+  ["earth-tones","Earth tones","#cebfa6 #9c7a54 #6b5a3e #3e4a3a #2a2620"],
+  ["jewel-tones","Jewel tones","#1f6f5c #7b2d4e #2b4b8c #c9922b #3d1f4a"],
+  ["monochrome","Monochrome","#f2f2f2 #b8b8b8 #6e6e6e #1c1c1c #0b0b0b"],
+  ["pastel","Pastel","#f6dfe4 #e7eadf #dfe7f0 #f3ecdd #e9def0"],
+  ["greige","Greige","#ece8e2 #d3cdc4 #b2aa9f #857d73 #4f4943"],
+  ["stone-linen","Stone & linen","#f1ece3 #ddd2c0 #c2b39b #9a8a73 #6b6052"],
+  ["mushroom","Mushroom","#e9e1d6 #cbbcab #a8957f #7f6d5c #554739"],
+  ["mocha-mousse","Mocha mousse","#eadccd #c8a68a #a47864 #6f4e3d #3b2a22"],
+  ["quiet-luxury","Camel & cream","#f3ede3 #d8c6ac #b08d66 #6e5440 #2f2620"],
+  ["blush-clay","Blush clay","#f4e4dc #e3c0ae #c99682 #a4705f #6e4a3e"],
+  ["sunbleached","Sun-bleached","#f7f4ee #e7e0d2 #c9d4d6 #9db3b8 #c8b28f"],
+  ["black-white-oak","Black, white & oak","#f6f4f0 #e3dccf #c4a77d #3b3a38 #141414"],
+  ["concrete-grey","Concrete","#e3e1dd #bdbab4 #8f8c86 #5e5c58 #2f2e2c"],
+  ["nordic-frost","Nordic frost","#f6f8f9 #dfe7ec #bccbd5 #8aa1b1 #4c6475"],
+  ["nordic-noir","Nordic noir","#d8d2c6 #a39c90 #6b665e #3f3d3a #2a2a2a"],
+  ["gustavian","Gustavian grey-blue","#eef0ec #d6dcd8 #aebcbf #7f9298 #c8b88f"],
+  ["tatami","Tatami","#efe6cf #d8c79d #a8925f #6f5f3d #2e2a24"],
+  ["hanok","Hanok","#f2ebdf #d9c6a5 #a8835a #6d4f35 #3b3a37"],
+  ["sage-cream","Sage & cream","#f3efe4 #dfe3d2 #b5c1a3 #889a76 #5d6e52"],
+  ["biophilic-moss","Moss & fern","#e9eadb #b9c49a #7f9461 #4c6440 #2e3a2a"],
+  ["olive-ochre","Olive & ochre","#ece4cf #c9a24a #7c7a3c #4f5230 #2b2b20"],
+  ["forest-walnut","Forest & walnut","#e6dccb #8b6a4a #5a4330 #2f4a3a #1c2a22"],
+  ["heritage-green","Heritage green","#eee8da #c9c2a3 #5f7356 #2f4436 #b48a4a"],
+  ["tropical-green","Tropical green","#f2ead8 #a9c48f #4f8a5b #1f5a3f #c98b4a"],
+  ["coastal-blue","Coastal blue","#f8f8f5 #dce7ec #9fbfd0 #3f6f8f #1f3c55"],
+  ["santorini","Santorini","#fbfaf7 #e9eef1 #2a6fb0 #1b3f6b #d9cbb0"],
+  ["navy-brass","Navy & brass","#f2efe8 #c9a55a #2c3e5c #1b2638 #8e9aa8"],
+  ["chinoiserie","Blue & white","#f6f4ef #cfdbe8 #5a83b5 #1f3f7a #c9a35a"],
+  ["iznik","Iznik","#f3efe6 #3a7fb0 #1f8a8a #c23a33 #1f2f5a"],
+  ["lavender-grey","Lavender grey","#f1eff4 #d9d3e3 #b2a8c6 #7f7896 #4a4558"],
+  ["provence","Provence","#f2ede1 #c9bfdc #9a8bb8 #d8b46a #8a9a6b"],
+  ["terracotta-sand","Terracotta & sand","#f1e3d0 #e0b48c #c46a3f #8c3f26 #4e3a2e"],
+  ["tuscan","Tuscan","#f0e2c6 #d8a36b #b4652f #7b4a2b #6b6a3a"],
+  ["spanish","Spanish tile","#f6efe2 #d77a3c #2b5c8f #e3b74c #5a3a2a"],
+  ["desert-sunset","Desert sunset","#f0d9b5 #e2a26b #c2673f #8c3f2b #4d2a22"],
+  ["arabian-sand","Arabian sand","#f1e4cc #d8b98a #a8784a #5a2e2a #1f3b4d"],
+  ["najdi","Najdi mud & indigo","#e9d6b3 #c99b62 #9a6a3f #2f5a6b #b5432f"],
+  ["african-earth","African earth","#efe0c6 #c98a4b #8a4a2a #2b2420 #d9c3a0"],
+  ["saddle-leather","Saddle leather","#efe1c9 #c6935e #8f5a33 #5a3826 #2e2420"],
+  ["chalet","Chalet","#efe6d6 #c8a77f #8a5f3b #5a3b26 #a83a2f"],
+  ["colonial-tropic","Colonial tropic","#f1ebdc #d4c39f #7d8a5f #3d2c22 #b38a52"],
+  ["indian-spice","Indian spice","#f2c14e #d1495b #8a2f5b #2e6f6e #f4e3c3"],
+  ["lacquer-red","Lacquer red","#f2e6d8 #b8322a #7a1f1c #2b1d1a #c9a24a"],
+  ["burgundy-gold","Burgundy & gold","#e9dcc4 #b8944b #7a2b33 #4a1d24 #24161a"],
+  ["midnight-moody","Midnight","#d8c7a6 #a0705a #5a4a5f #2f3a4a #1d2433"],
+  ["industrial-rust","Iron & rust","#d9d4cc #9a958c #5a5650 #a35a32 #2a2826"],
+  ["art-nouveau","Nouveau sage & copper","#e7dfc6 #9fae7f #5d7a5a #b07a3c #3f3a2c"],
+  ["rococo-pastel","Rococo pastel","#f6e8e3 #eadbe8 #dfe8e4 #f1e6c9 #c9ad6a"],
+  ["cottage-floral","Cottage floral","#f7efe6 #f0c9c4 #c9d6b8 #f3e3a6 #9a7b8f"],
+  ["butter-yellow","Butter yellow","#fbf4dc #f6e3a1 #e8c766 #b89a4b #5f5a4a"],
+  ["parisian","Parisian","#f4f1ec #e2ddd4 #b9b1a4 #2f2f33 #b08e57"],
+  ["glam-blush","Blush & gold","#f7e6e4 #e8b9b6 #c9a24a #5c3a4a #1f1a1d"],
+  ["mid-century","Teal & mustard","#efe3c8 #e2a33b #2f7d7a #b5532c #6b4a2f"],
+  ["seventies","70s sunset","#f0dcb4 #e8a33d #c4612a #8a4b2a #5b6b2f"],
+  ["eclectic-mix","Eclectic mix","#f0e6d2 #d9a03f #2f6f6a #a83f4a #3a2f4f"],
+  ["primary-bauhaus","Bauhaus primaries","#f4f1ea #d63a2f #1f4fa3 #f2c230 #1a1a1a"],
+  ["memphis-pop","Memphis pop","#f6efe4 #f7d046 #ef5a8f #2ab3c4 #1a1a1a"],
+  ["dopamine","Dopamine brights","#ff6f59 #ffd23f #3bceac #7b6cf6 #ff8fc1"],
+  ["y2k","Y2K iridescent","#f6e6ff #ffc2e2 #b8e6ff #c9c9d6 #9a7cff"],
+  ["cyber-neon","Cyber neon","#0f0f1a #2a1f4a #ff3fa4 #2fe6ff #f2f04a"],
+];
+
+const LIGHTING_MOODS = [
+  { id: "daylight", label: "Natural daylight", phrase: "bright natural daylight through the windows" },
+  { id: "golden",   label: "Golden hour",      phrase: "low golden-hour sunlight casting long warm shadows" },
+  { id: "overcast", label: "Overcast",         phrase: "soft overcast daylight with gentle, even shadows" },
+  { id: "evening",  label: "Warm evening",     phrase: "warm evening light from table and floor lamps" },
+  { id: "blue",     label: "Blue hour",        phrase: "cool blue-hour dusk outside balanced with warm interior lamps" },
+  { id: "night",    label: "Night, lamps",     phrase: "night scene lit by warm lamps and candlelight" },
+  { id: "dramatic", label: "Dramatic spot",    phrase: "dramatic directional spotlighting" },
+  { id: "soft",     label: "Soft diffused",    phrase: "soft diffused light" },
+  { id: "neon",     label: "Neon / RGB",       phrase: "coloured neon and RGB accent lighting" },
+];
+
+const CATEGORIES = [
+  { id: "furniture",    name: "Furniture" },
+  { id: "lighting",     name: "Lighting" },
+  { id: "decor",        name: "Decor" },
+  { id: "flooring",     name: "Flooring" },
+  { id: "walls",        name: "Walls" },
+  { id: "textiles",     name: "Textiles" },
+  { id: "plants",       name: "Plants" },
+  { id: "kitchen",      name: "Kitchen" },
+  { id: "bathroom",     name: "Bathroom" },
+  { id: "outdoor",      name: "Outdoor" },
+  { id: "storage",      name: "Storage" },
+  { id: "architecture", name: "Architecture" },
+  { id: "kids",         name: "Kids & nursery" },
+];
+
+/* Finish groups. [key, label, phrase, matchTerms, styleTags] — matchTerms are
+   words that, when found in a style's materials/keywords, make the piece a match. */
+const FINISHES = {
+  wood: [
+    ["oak","Pale oak","pale oak","oak","scandinavian japandi warm-minimal organic-modern hygge contemporary"],
+    ["walnut","Walnut","walnut","walnut","mid-century danish-modern vintage-modern modern-luxury quiet-luxury"],
+    ["teak","Teak","teak","teak","danish-modern balinese mid-century tropical nautical spa-retreat"],
+    ["ash","White ash","white ash","ash white oak","minimalist scandinavian modern scandustrial japanese-traditional"],
+    ["reclaimed","Reclaimed","reclaimed wood","reclaimed timber","rustic farmhouse industrial eco cabin western-ranch"],
+    ["ebonised","Ebonised","ebonised black oak","ebonised dark oak","dark-scandi modern-farmhouse dark-moody japandi gothic-revival"],
+    ["cherry","Cherry","cherry wood","cherry","shaker traditional biedermeier new-traditional"],
+    ["bamboo","Bamboo","bamboo","bamboo","zen balinese tropical eco japanese-traditional korean-hanok"],
+    ["painted","White-painted","white-painted wood","painted wood","country-cottage shabby-chic swedish-gustavian coastal hamptons"],
+    ["lacquer","Lacquered","high-gloss lacquered","lacquer","art-deco hollywood-regency chinese-modern glam postmodern"],
+  ],
+  uph: [
+    ["boucle","Bouclé","cream bouclé","bouclé","contemporary soft-modern organic-modern scandinavian modern-luxury"],
+    ["velvet","Velvet","velvet","velvet","art-deco hollywood-regency maximalist glam dark-moody seventies"],
+    ["linen","Linen","washed linen","linen","coastal coastal-grandmother california-modern warm-minimal french-country"],
+    ["leather","Black leather","black leather","leather","modern urban-modern bauhaus industrial urban-chic"],
+    ["cognac","Cognac leather","cognac leather","leather saddle","mid-century western-ranch dark-academia vintage-modern cabin"],
+    ["wool","Felted wool","felted wool","wool","scandinavian hygge danish-modern japandi quiet-luxury"],
+    ["mohair","Mohair","mohair","mohair cashmere","quiet-luxury soft-modern modern-luxury"],
+    ["chenille","Chenille","chenille","chenille","transitional new-traditional contemporary seventies"],
+    ["chintz","Floral chintz","floral chintz","chintz floral","english-country grandmillennial cottagecore country-cottage shabby-chic"],
+  ],
+  metal: [
+    ["brass","Brass","brushed brass","brass","art-deco modern-luxury mid-century arabian-majlis glam parisian"],
+    ["steel","Black steel","blackened steel","steel","industrial loft modern-farmhouse scandustrial urban-chic brutalist"],
+    ["chrome","Chrome","polished chrome","chrome","bauhaus high-tech futuristic space-age y2k cyberpunk"],
+    ["nickel","Nickel","brushed nickel","nickel","transitional new-traditional contemporary hamptons"],
+    ["iron","Wrought iron","wrought iron","iron","mediterranean spanish-revival tuscan rustic gothic-revival mexican-hacienda art-nouveau"],
+    ["copper","Copper","copper","copper","steampunk arts-and-crafts craftsman farmhouse industrial"],
+    ["gold","Gold leaf","gilded gold-leaf","gilt gold","baroque rococo empire hollywood-regency neoclassical glam"],
+  ],
+  stone: [
+    ["carrara","Carrara marble","white Carrara marble","marble","modern-luxury neoclassical parisian contemporary minimalist"],
+    ["travertine","Travertine","travertine","travertine","organic-modern modern-mediterranean quiet-luxury desert-modern brutalist modern-arabic"],
+    ["granite","Black granite","black granite","granite","modern high-tech urban-modern dark-moody"],
+    ["terrazzo","Terrazzo","terrazzo","terrazzo","memphis postmodern mid-century dopamine"],
+    ["concrete","Concrete","polished concrete","concrete","industrial brutalist minimalist loft scandustrial"],
+    ["onyx","Onyx","backlit onyx","onyx","glam modern-luxury hollywood-regency arabian-majlis"],
+    ["limestone","Limestone","honed limestone","limestone stone","wabi-sabi french-country tuscan spa-retreat"],
+    ["verde","Green marble","green verde marble","marble","art-deco dark-academia maximalist parisian"],
+  ],
+  ceramic: [
+    ["glazed","Glazed","glossy glazed ceramic","ceramic","contemporary mid-century dopamine eclectic"],
+    ["terracotta","Terracotta","terracotta","terracotta","mediterranean tuscan spanish-revival desert-modern boho"],
+    ["stoneware","Stoneware","speckled stoneware","stoneware clay","wabi-sabi japandi scandinavian organic-modern japanese-traditional korean-hanok"],
+    ["porcelain","Blue-and-white","blue-and-white porcelain","porcelain","chinoiserie grandmillennial english-country traditional"],
+    ["zellige","Zellige","green zellige","zellige","moroccan modern-mediterranean arabian-majlis eclectic"],
+    ["raku","Raku","crackled raku","raku","wabi-sabi japanese-traditional zen"],
+  ],
+  fiber: [
+    ["rattan","Rattan","rattan","rattan","boho tropical coastal jungalow seventies coastal-grandmother"],
+    ["wicker","White wicker","white wicker","wicker","hamptons grandmillennial country-cottage coastal"],
+    ["jute","Jute","jute","jute","boho coastal farmhouse eco african-modern"],
+    ["seagrass","Seagrass","seagrass","seagrass","coastal hamptons british-colonial coastal-grandmother"],
+    ["cane","Cane","woven cane","cane","mid-century british-colonial japandi vintage-modern parisian"],
+    ["rush","Rush","rush-woven","rush hemp","shaker french-country wabi-sabi eco japanese-traditional korean-hanok"],
+  ],
+  glass: [
+    ["clear","Clear glass","clear glass","glass","modern minimalist scandinavian contemporary"],
+    ["smoked","Smoked glass","smoked glass","smoked glass","dark-moody urban-modern seventies quiet-luxury"],
+    ["fluted","Fluted glass","fluted glass","fluted","art-deco contemporary parisian modern-luxury"],
+    ["opal","Opal glass","opal frosted glass","opal","mid-century space-age bauhaus soft-modern"],
+    ["stained","Stained glass","stained glass","stained glass","art-nouveau gothic-revival victorian arts-and-crafts"],
+    ["murano","Murano glass","Murano glass","murano","eclectic maximalist glam dopamine"],
+  ],
+  textile: [
+    ["cotton","Cotton","natural cotton","cotton","scandinavian farmhouse shaker coastal"],
+    ["tlinen","Linen","stone-washed linen","linen","warm-minimal coastal-grandmother japandi french-country"],
+    ["chunky","Chunky wool","chunky wool","wool sheepskin","hygge scandinavian cabin alpine-chalet"],
+    ["silk","Raw silk","raw silk","silk","quiet-luxury chinese-modern indian regency"],
+    ["crushed","Crushed velvet","crushed velvet","velvet","maximalist dark-moody glam baroque victorian"],
+    ["jacquard","Jacquard","jacquard","jacquard","traditional victorian arabian-majlis regency"],
+    ["kilim","Kilim","kilim","kilim","boho turkish moroccan eclectic african-modern"],
+    ["mudcloth","Mud cloth","mud cloth","mud cloth","african-modern boho jungalow eclectic"],
+  ],
+  paint: [
+    ["sage","Sage green","sage green","sage","cottagecore country-cottage shaker edwardian organic-modern"],
+    ["terra","Terracotta","terracotta","terracotta","mediterranean desert-modern southwestern seventies"],
+    ["navy","Navy","navy blue","navy","nautical hamptons federal traditional"],
+    ["ochre","Ochre","ochre","ochre mustard","seventies mid-century eclectic african-modern"],
+    ["blush","Blush pink","blush pink","pink blush","glam soft-modern rococo y2k"],
+    ["charcoal","Charcoal","charcoal","charcoal black walls","dark-scandi dark-moody industrial urban-chic"],
+    ["white","Warm white","warm white","white","scandinavian minimalist warm-minimal greek-island"],
+    ["olive","Olive","olive green","olive","dark-academia vintage-modern arts-and-crafts japandi"],
+    ["teal","Deep teal","deep teal","teal","art-deco maximalist dark-moody eclectic"],
+    ["burgundy","Burgundy","burgundy","burgundy","dark-academia victorian baroque gothic-revival"],
+    ["cobalt","Cobalt","cobalt blue","cobalt blue","greek-island spanish-revival dopamine moroccan"],
+  ],
+  pattern: [
+    ["botanical","Botanical","botanical","botanical palm","tropical jungalow biophilic english-country"],
+    ["geometric","Geometric","geometric","geometric","art-deco mid-century memphis modern-arabic"],
+    ["damask","Damask","damask","damask ornate","victorian baroque traditional gothic-revival"],
+    ["stripe","Ticking stripe","ticking-stripe","stripes","hamptons regency nautical farmhouse"],
+    ["toile","Toile","toile de Jouy","toile","french-country grandmillennial cottagecore"],
+    ["chinois","Chinoiserie","chinoiserie","chinoiserie birds","chinoiserie grandmillennial hollywood-regency"],
+    ["arabesque","Arabesque","arabesque","arabesque","arabian-majlis moroccan modern-arabic najdi turkish"],
+    ["checker","Checkerboard","checkerboard","checker","y2k dopamine seventies eclectic"],
+    ["ikat","Ikat","ikat","ikat block print","boho indian balinese tropical"],
+  ],
+  pot: [
+    ["tpot","Terracotta pot","terracotta pot","terracotta","mediterranean boho tuscan rustic"],
+    ["basket","Woven basket","woven seagrass basket","seagrass","boho coastal jungalow scandinavian"],
+    ["cplanter","Ceramic planter","glazed ceramic planter","ceramic","contemporary japandi mid-century"],
+    ["concplanter","Concrete planter","concrete planter","concrete","industrial brutalist minimalist urban-modern"],
+    ["bplanter","Brass planter","brass planter","brass","glam art-deco modern-luxury arabian-majlis"],
+  ],
+  tile: [
+    ["subway","Subway","white subway","subway","modern-farmhouse industrial scandinavian brownstone"],
+    ["hex","Hexagon","hexagon","hexagon","mid-century art-deco modern y2k"],
+    ["herring","Herringbone","herringbone","herringbone","parisian contemporary transitional"],
+    ["bwcheck","Checkerboard","black-and-white checkerboard","checker","art-deco parisian victorian dopamine"],
+    ["encaustic","Encaustic","patterned encaustic","encaustic","spanish-revival moroccan mexican-hacienda eclectic"],
+    ["scallop","Fish-scale","scalloped fish-scale","scallop","art-deco coastal soft-modern rococo"],
+    ["tzellige","Zellige","handmade zellige","zellige","moroccan modern-mediterranean organic-modern"],
+    ["mosaic","Mosaic","mosaic","mosaic","turkish greek-island mediterranean art-nouveau"],
+    ["talavera","Talavera","hand-painted talavera","talavera","mexican-hacienda spanish-revival southwestern"],
+  ],
+};
+
+/* Base pieces. [id, name, category, roomCodes, finishGroup(-excludedKey…), template, baseStyles]
+   template: {f} = finish phrase, {a} = a/an chosen by the next word. */
+const BASES = [
+  ["sofa3","Three-seat sofa","furniture","LGM","uph","{a} {f} three-seat sofa","contemporary transitional modern"],
+  ["curved-sofa","Curved sofa","furniture","LM","uph-chintz","{a} {f} curved sofa","soft-modern organic-modern contemporary"],
+  ["chesterfield","Chesterfield sofa","furniture","LOM","uph-boucle","{a} {f} Chesterfield sofa","traditional english-country dark-academia"],
+  ["daybed","Daybed","furniture","LBGP","uph","{a} {f} daybed","mid-century japandi hollywood-regency"],
+  ["modular-sofa","Modular sofa","furniture","LH","uph","{a} low {f} modular sofa","modern seventies urban-modern"],
+  ["lounge-chair","Lounge chair","furniture","LBOM","uph","{a} {f} lounge chair","mid-century danish-modern"],
+  ["wingback","Wingback chair","furniture","LBO","uph","{a} {f} wingback chair","traditional english-country"],
+  ["slipper-chair","Slipper chair","furniture","BGL","uph","{a} {f} slipper chair","hollywood-regency glam"],
+  ["swivel-chair","Swivel chair","furniture","LO","uph","{a} {f} swivel chair","contemporary seventies"],
+  ["dining-uph","Upholstered dining chairs","furniture","DK","uph","{f} upholstered dining chairs","transitional modern-luxury"],
+  ["uph-bed","Upholstered bed","furniture","BG","uph","{a} {f} upholstered bed with a tall headboard","modern-luxury contemporary"],
+  ["desk-chair","Desk chair","furniture","O","uph","{a} {f} ergonomic desk chair","modern gaming-setup"],
+  ["recliner","Recliner","furniture","HL","uph-chintz","{a} {f} recliner","modern"],
+  ["theatre-seats","Theatre seating","furniture","H","uph-chintz-linen","tiered {f} theatre seats","modern"],
+  ["ottoman","Ottoman","furniture","LB","uph","{a} {f} ottoman","traditional transitional"],
+  ["rocking-chair","Rocking chair","furniture","LCN","wood","{a} {f} rocking chair","farmhouse shaker"],
+  ["dining-chairs","Dining chairs","furniture","DK","wood","{a} set of {f} dining chairs","scandinavian"],
+  ["dining-bench","Dining bench","furniture","DE","wood","{a} {f} dining bench","farmhouse japandi"],
+  ["round-table","Round dining table","furniture","DK","wood","{a} round {f} pedestal dining table","scandinavian parisian"],
+  ["extending-table","Extending dining table","furniture","D","wood","{a} long {f} extending dining table","traditional farmhouse"],
+  ["coffee-wood","Coffee table (wood)","furniture","LM","wood","{a} low {f} coffee table","japandi mid-century"],
+  ["nesting-tables","Nesting tables","furniture","L","wood","{f} nesting tables","mid-century"],
+  ["console","Console table","furniture","EL","wood","{a} slim {f} console table","transitional"],
+  ["bed-frame","Bed frame","furniture","BG","wood","{a} {f} bed frame","scandinavian japandi"],
+  ["bunk-bed","Bunk bed","furniture","C","wood","{a} {f} bunk bed","scandinavian"],
+  ["dresser","Dresser","furniture","BGW","wood","{a} {f} six-drawer dresser","mid-century"],
+  ["nightstand","Nightstand","furniture","BG","wood","{a} {f} nightstand","japandi"],
+  ["dressing-table","Dressing table","furniture","BW","wood","{a} {f} dressing table with a mirror","hollywood-regency"],
+  ["desk","Desk","furniture","OBC","wood","{a} {f} writing desk","mid-century"],
+  ["kids-table","Kids table set","kids","C","wood","{a} {f} kids table with little chairs","scandinavian"],
+  ["sun-lounger","Sun lounger","outdoor","P","wood-lacquer-painted","{a} {f} sun lounger","coastal"],
+  ["woven-armchair","Woven armchair","furniture","LPB","fiber","{a} {f} armchair","boho coastal"],
+  ["egg-chair","Hanging egg chair","furniture","LBP","fiber","{a} hanging {f} egg chair","boho tropical"],
+  ["majlis-seating","Majlis floor seating","furniture","ML","textile","low floor majlis cushions in {f}","arabian-majlis najdi"],
+  ["pouf","Pouf","furniture","LCM","textile","{a} {f} floor pouf","boho moroccan"],
+  ["counter-stools","Counter stools","furniture","K","metal","{f} counter stools","industrial modern"],
+  ["side-table","Side table","furniture","LBG","metal","{a} {f} side table","contemporary"],
+  ["canopy-bed","Canopy bed","furniture","B","metal","{a} {f} four-poster canopy bed","contemporary"],
+  ["outdoor-dining","Outdoor dining set","outdoor","P","metal-gold","{a} {f} outdoor dining set","mediterranean"],
+  ["stone-dining","Stone dining table","furniture","D","stone","{a} {f} dining table","modern-luxury"],
+  ["coffee-stone","Coffee table (stone)","furniture","LM","stone","{a} sculptural {f} coffee table","organic-modern"],
+  ["console-stone","Stone console","furniture","E","stone","{a} {f} console","modern-luxury"],
+
+  ["globe-pendant","Globe pendant","lighting","KDLE","glass","{a} {f} globe pendant light","mid-century"],
+  ["dome-pendant","Dome pendant","lighting","KD","metal","{a} {f} dome pendant","industrial scandinavian"],
+  ["chandelier","Chandelier","lighting","DLBE","metal","{a} {f} chandelier","traditional"],
+  ["glass-chandelier","Glass chandelier","lighting","DE","glass","{a} tiered {f} chandelier","glam"],
+  ["floor-lamp","Floor lamp","lighting","LOB","metal","{a} {f} floor lamp","mid-century"],
+  ["table-lamp","Table lamp","lighting","LBOG","ceramic","{a} {f} table lamp","traditional"],
+  ["sconces","Wall sconces","lighting","TBLED","metal","{f} wall sconces","traditional"],
+  ["picture-light","Picture light","lighting","LO","metal","{a} {f} picture light over the art","dark-academia"],
+  ["desk-lamp","Desk lamp","lighting","OC","metal","{a} {f} task lamp","modern"],
+  ["lantern","Lantern","lighting","PME","metal","{a} pierced {f} lantern","moroccan"],
+  ["woven-pendant","Woven pendant","lighting","LDBP","fiber","{a} {f} pendant shade","boho"],
+  ["track-lights","Track lighting","lighting","KO","metal","{f} track lighting","modern"],
+  ["linear-pendant","Linear pendant","lighting","DK","metal","{a} {f} linear pendant","contemporary"],
+  ["mushroom-lamp","Mushroom lamp","lighting","LB","glass","{a} {f} mushroom lamp","seventies"],
+
+  ["vase","Vase","decor","LDBE","ceramic","{a} {f} vase","contemporary"],
+  ["bud-vases","Bud vases","decor","LDB","glass","{a} trio of {f} bud vases","contemporary"],
+  ["arched-mirror","Arched mirror","decor","EBLT","metal","{a} {f} arched mirror","contemporary"],
+  ["framed-mirror","Framed mirror","decor","EBLT","wood","{a} {f} framed mirror","traditional"],
+  ["tray","Tray","decor","LBT","stone","{a} {f} tray","modern-luxury"],
+  ["bowl","Fruit bowl","decor","KD","wood","{a} turned {f} bowl","japandi"],
+  ["sculpture","Sculpture","decor","LOE","stone","{a} {f} sculpture","contemporary"],
+  ["candlesticks","Candlesticks","decor","LD","metal","{f} candlesticks","traditional"],
+  ["wall-clock","Wall clock","decor","LKOE","wood","{a} {f} wall clock","mid-century"],
+  ["framed-art","Framed art","decor","LBODEG","wood","{a} large abstract artwork in {a} {f} frame","contemporary"],
+  ["bookends","Bookends","decor","LO","stone","{f} bookends","dark-academia"],
+  ["wall-hanging","Wall hanging","decor","LBG","textile","{a} {f} wall hanging","boho"],
+  ["wall-baskets","Basket wall","decor","LDE","fiber","{a} wall of {f} baskets","boho"],
+  ["mabkhara","Incense burner","decor","ME","metal","{a} {f} mabkhara incense burner","arabian-majlis najdi"],
+  ["dallah","Coffee pot","decor","MK","metal","{a} {f} dallah coffee pot","arabian-majlis najdi"],
+  ["neon-sign","Neon sign","decor","CHL","paint","{a} {f} neon sign","pop-art gaming-setup"],
+
+  ["wood-floor","Wood floor","flooring","LBDOEGMNW","wood-lacquer","wide-plank {f} floors","scandinavian"],
+  ["parquet","Parquet","flooring","LDBE","wood-lacquer-painted-bamboo","{f} herringbone parquet","parisian"],
+  ["stone-floor","Stone floor","flooring","LTEK","stone","{f} floor slabs","modern-luxury"],
+  ["tile-floor","Floor tile","flooring","KTEPY","tile","{f} floor tiles","mediterranean"],
+  ["area-rug","Area rug","flooring","LBDOGM","textile","{a} {f} area rug","contemporary"],
+  ["pattern-rug","Patterned rug","flooring","LBDE","pattern","{a} {f} rug","eclectic"],
+  ["runner","Runner rug","flooring","EK","textile","{a} {f} runner","traditional"],
+  ["carpet","Wall-to-wall carpet","flooring","BHCNG","paint","{f} wall-to-wall carpet","transitional"],
+  ["decking","Decking","outdoor","P","wood-lacquer-painted","{f} deck boards","coastal"],
+  ["natural-rug","Natural-fibre rug","flooring","LBD","fiber","{a} {f} rug","coastal"],
+
+  ["paint","Painted walls","walls","LBKTDOCPEGMWHYN","paint","{f} painted walls","contemporary"],
+  ["limewash","Limewash","walls","LBDEM","paint","{f} limewash walls","wabi-sabi"],
+  ["wallpaper","Wallpaper","walls","LBDGCNE","pattern","{f} wallpaper","maximalist"],
+  ["panelling","Wall panelling","walls","LBOEH","wood","{f} slatted wall panelling","japandi"],
+  ["tile-wall","Tile feature wall","walls","KTY","tile","{a} {f} tile feature wall","contemporary"],
+  ["stone-wall","Stone feature wall","walls","LBTE","stone","{a} {f} feature wall","modern-luxury"],
+  ["plaster","Plaster walls","walls","LBTEM","paint","{f} Venetian plaster walls","mediterranean"],
+  ["mural","Wall mural","walls","LDBC","pattern","{a} hand-painted {f} mural","maximalist"],
+  ["wainscoting","Wainscoting","walls","DEBO","paint","{f} wainscoting","traditional"],
+  ["acoustic","Acoustic panels","walls","HO","uph-chintz","acoustic wall panels in {f}","modern gaming-setup"],
+
+  ["curtains","Curtains","textiles","LBDG","textile","floor-length {f} curtains","contemporary"],
+  ["sheers","Sheer drapes","textiles","LBP","textile-kilim-mudcloth-chunky","airy {f} sheers","coastal"],
+  ["cushions","Cushions","textiles","LBGPM","textile","{f} throw cushions","boho"],
+  ["throw","Throw","textiles","LBG","textile","{a} {f} throw","scandinavian"],
+  ["bedding","Bedding","textiles","BG","textile-kilim-mudcloth","{f} bedding","warm-minimal"],
+  ["blinds","Roman blinds","textiles","KBOT","pattern","{f} roman blinds","traditional"],
+  ["tablecloth","Tablecloth","textiles","DP","pattern","{a} {f} tablecloth","french-country"],
+
+  ["p-monstera","Monstera","plants","LOBPE","pot","{a} monstera in {a} {f}","tropical"],
+  ["p-fiddle","Fiddle leaf fig","plants","LOEB","pot","{a} fiddle leaf fig in {a} {f}","contemporary"],
+  ["p-olive","Olive tree","plants","LPEK","pot","{a} olive tree in {a} {f}","mediterranean"],
+  ["p-snake","Snake plant","plants","BOTE","pot","{a} snake plant in {a} {f}","minimalist"],
+  ["p-kentia","Kentia palm","plants","LEM","pot","{a} kentia palm in {a} {f}","british-colonial"],
+  ["p-bird","Bird of paradise","plants","LOP","pot","{a} bird of paradise in {a} {f}","tropical"],
+  ["p-rubber","Rubber plant","plants","LOB","pot","{a} rubber plant in {a} {f}","mid-century"],
+  ["p-pothos","Pothos","plants","KTOB","pot","{a} trailing pothos in {a} {f}","biophilic"],
+  ["p-fern","Boston fern","plants","TPC","pot","{a} Boston fern in {a} {f}","country-cottage"],
+  ["p-cactus","Cactus","plants","LOP","pot","{a} tall cactus in {a} {f}","southwestern"],
+  ["p-bonsai","Bonsai","plants","OLE","pot","{a} bonsai in {a} {f}","zen japanese-traditional japandi"],
+  ["p-orchid","Orchid","plants","TBL","pot","{a} white orchid in {a} {f}","modern-luxury"],
+  ["p-lemon","Lemon tree","plants","PK","pot","{a} lemon tree in {a} {f}","mediterranean"],
+  ["p-date","Date palm","plants","PEM","pot","{a} young date palm in {a} {f}","najdi arabian-majlis"],
+
+  ["cab-paint","Painted cabinets","kitchen","KY","paint","{f} shaker kitchen cabinets","farmhouse"],
+  ["cab-wood","Wood cabinets","kitchen","K","wood","{f} flat-front kitchen cabinets","modern"],
+  ["counters","Countertops","kitchen","KT","stone","{f} countertops","modern"],
+  ["backsplash","Backsplash","kitchen","K","tile","{f} tile backsplash","contemporary"],
+  ["island","Kitchen island","kitchen","K","stone","{a} {f} waterfall island","modern-luxury"],
+  ["range-hood","Range hood","kitchen","K","metal","{a} {f} range hood","farmhouse"],
+  ["faucet","Kitchen faucet","kitchen","K","metal","{a} {f} bridge faucet","farmhouse"],
+  ["sink","Sink","kitchen","K","stone","{a} {f} undermount sink","modern"],
+  ["open-shelves","Open shelves","kitchen","K","wood","{f} open shelves","scandinavian"],
+  ["hardware","Cabinet hardware","kitchen","KW","metal","{f} cabinet pulls","transitional"],
+
+  ["tub","Freestanding tub","bathroom","T","stone","{a} freestanding {f} bathtub","modern-luxury"],
+  ["vanity","Vanity","bathroom","T","wood","{a} floating {f} vanity","modern"],
+  ["basin","Vessel basin","bathroom","T","ceramic","{a} {f} vessel basin","wabi-sabi"],
+  ["shower","Walk-in shower","bathroom","T","tile","{a} walk-in shower lined in {f} tile","contemporary"],
+  ["fixtures","Bath fixtures","bathroom","T","metal","{f} bath fixtures","modern-luxury"],
+  ["pill-mirror","Pill mirror","bathroom","T","metal","{a} {f} pill-shaped mirror","contemporary"],
+  ["towels","Towels","bathroom","T","textile-kilim-mudcloth-crushed","{f} towels","spa-retreat"],
+
+  ["outdoor-sofa","Outdoor sofa","outdoor","P","fiber","{a} weatherproof {f} outdoor sofa","coastal"],
+  ["pergola","Pergola","outdoor","P","wood","{a} {f} pergola overhead","mediterranean"],
+  ["parasol","Parasol","outdoor","P","textile-crushed-mudcloth","{a} {f} parasol","coastal"],
+  ["fire-pit","Fire pit","outdoor","P","metal","{a} {f} fire pit","rustic"],
+  ["outdoor-rug","Outdoor rug","outdoor","P","pattern","{a} {f} outdoor rug","boho"],
+
+  ["bookcase","Bookcase","storage","LOB","wood","{a} floor-to-ceiling {f} bookcase","dark-academia"],
+  ["sideboard","Sideboard","storage","DLE","wood","{a} fluted {f} sideboard","mid-century"],
+  ["media-unit","Media unit","storage","LBH","wood","{a} low {f} media unit","modern"],
+  ["wardrobe","Wardrobe","storage","BGW","wood","{a} {f} wardrobe","contemporary"],
+  ["etagere","Étagère","storage","LO","metal","{a} {f} étagère shelving unit","art-deco"],
+  ["baskets","Storage baskets","storage","LBTCEY","fiber","{f} storage baskets","scandinavian"],
+  ["shoe-cabinet","Shoe cabinet","storage","E","wood","{a} slim {f} shoe cabinet","minimalist"],
+  ["closet-island","Closet island","storage","W","stone","{a} closet island topped in {f}","modern-luxury"],
+  ["laundry-cab","Laundry cabinets","storage","Y","paint","{f} laundry cabinets with a folding counter","farmhouse"],
+  ["toy-cubbies","Toy cubbies","kids","CN","paint","{f} toy storage cubbies","scandinavian"],
+  ["blanket-chest","Blanket chest","storage","BG","wood","{a} {f} blanket chest","farmhouse"],
+
+  ["arch","Arched doorway","architecture","LDEM","stone","{a} {f} arched doorway","mediterranean modern-arabic"],
+  ["beams","Ceiling beams","architecture","LDKB","wood-lacquer-painted","exposed {f} ceiling beams","rustic"],
+  ["fireplace","Fireplace","architecture","LBM","stone","{a} {f} fireplace surround","traditional"],
+  ["coffered","Coffered ceiling","architecture","LDO","paint","{a} {f} coffered ceiling","neoclassical"],
+  ["windows","Steel-frame windows","architecture","LKDO","metal","floor-to-ceiling windows with {f} frames","modern"],
+  ["french-doors","French doors","architecture","LDBP","paint","{f} French doors","parisian"],
+  ["staircase","Staircase","architecture","E","wood","{a} {f} staircase","contemporary"],
+  ["niche","Display niche","architecture","LEMT","paint","{a} built-in display niche in {f}","modern-arabic"],
+  ["window-seat","Window seat","architecture","LBC","textile","{a} window seat with {f} cushions","country-cottage"],
+  ["mashrabiya","Mashrabiya screen","architecture","MEL","wood","{a} carved {f} mashrabiya screen","arabian-majlis modern-arabic najdi"],
+  ["columns","Columns","architecture","LDE","stone","{f} columns","neoclassical"],
+
+  ["house-bed","House-frame bed","kids","C","wood","{a} {f} house-frame bed","scandinavian"],
+  ["teepee","Play tent","kids","C","textile","{a} {f} play teepee","boho"],
+  ["kids-rug","Kids rug","kids","CN","pattern","{a} soft {f} play rug","scandinavian"],
+  ["kids-mural","Kids mural","kids","CN","paint","{a} {f} rainbow-and-cloud mural","scandinavian"],
+  ["changing","Changing table","kids","N","wood","{a} {f} changing table","scandinavian"],
+  ["crib","Crib","kids","N","wood","{a} {f} crib","scandinavian"],
+  ["glider","Nursing glider","kids","N","uph","{a} {f} nursing glider","contemporary"],
+];
+
+</script>
+<script>
+/* app.js — Roomprompt v2 logic. In-memory state; data from SIGNATURE_ITEMS + data2.js. */
+"use strict";
+
+const MAX_ITEMS = 12;
+const PAGE = 24;
+
+/* ---------- expand data ---------- */
+const roomByCode = Object.fromEntries(ROOM_TYPES.map((r) => [r.code, r.id]));
+const STYLES = STYLE_ROWS.map(([id, name, group, palette, materials, keywords, description]) => ({
+  id, name, group, description,
+  typicalPalette: palette,
+  typicalMaterials: materials.split(",").map((s) => s.trim()),
+  keywords: keywords.split(",").map((s) => s.trim()),
+  terms: (materials + ", " + keywords).toLowerCase(),
+  hay: (name + " " + description + " " + materials + " " + keywords + " " + group).toLowerCase(),
+}));
+const COLOR_PALETTES = PALETTE_ROWS.map(([id, name, hex]) => ({ id, name, colors: hex.split(" ") }));
+
+function withArticles(s) {
+  return s.replace(/\{a\} (\S)/g, (m, c) => (/[aeiou]/i.test(c) ? "an " : "a ") + c);
+}
+function buildItems() {
+  const out = SIGNATURE_ITEMS.map((it) => ({ ...it, sig: true, terms: [], finish: "" }));
+  BASES.forEach(([id, name, category, codes, spec, tpl, baseStyles]) => {
+    const [group, ...skip] = spec.split("-");
+    const rooms = [...codes].map((c) => roomByCode[c]).filter(Boolean);
+    const bs = baseStyles ? baseStyles.split(" ") : [];
+    (FINISHES[group] || []).forEach(([key, label, phrase, match, fstyles]) => {
+      if (skip.includes(key)) return;
+      out.push({
+        id: id + "--" + key,
+        name, finish: label, category,
+        roomTypes: rooms,
+        styleTags: Array.from(new Set(bs.concat(fstyles.split(" ")))),
+        terms: match.split(" "),
+        promptText: withArticles(tpl.replace("{f}", phrase)),
+      });
+    });
+  });
+  out.forEach((it) => {
+    it.hay = (it.name + " " + it.finish + " " + it.promptText + " " + it.category).toLowerCase();
+  });
+  return out;
+}
+const ITEMS = buildItems();
+const ITEM_MAP = new Map(ITEMS.map((i) => [i.id, i]));
+
+/* ---------- state ---------- */
+const state = {
+  room: "living-room",
+  size: { w: "", l: "" },
+  style: null,
+  styleQuery: "",
+  styleGroup: "all",
+  palette: "warm-neutrals",
+  paletteTouched: false,
+  paletteQuery: "",
+  mood: "daylight",
+  cam: { pos: "fl", height: "eye", lens: "24", ratio: "16:9", fmt: "plain" },
+  out: "3d",
+  plan: "plan",
+  selected: [],
+  search: "",
+  category: "all",
+  showAll: false,
+  pages: {},
+};
+let matchSet = new Set();   // item ids that suit the current style
+
+/* ---------- helpers ---------- */
+const $ = (id) => document.getElementById(id);
+const byId = (list, id) => list.find((x) => x.id === id) || null;
+const styleById = (id) => byId(STYLES, id);
+const roomName = (id) => (byId(ROOM_TYPES, id) || {}).name || "";
+function make(tag, cls, text) {
+  const el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (text != null) el.textContent = text;
+  return el;
+}
+function joinNaturally(parts) {
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return parts[0] + " and " + parts[1];
+  return parts.slice(0, -1).join(", ") + ", and " + parts[parts.length - 1];
+}
+function tokens(q) { return q.trim().toLowerCase().split(/\s+/).filter(Boolean); }
+function hit(hay, toks) { return toks.every((t) => hay.includes(t)); }
+function sizeOk() {
+  const w = parseFloat(state.size.w), l = parseFloat(state.size.l);
+  return w > 0 && l > 0 ? { w, l } : null;
+}
+function fmtNum(n) { return n.toLocaleString("en-US"); }
+
+function computeMatches() {
+  matchSet = new Set();
+  const s = styleById(state.style);
+  if (!s) return;
+  ITEMS.forEach((it) => {
+    if (it.styleTags.includes(s.id) || it.terms.some((t) => s.terms.includes(t))) matchSet.add(it.id);
+  });
+}
+
+/* ---------- room ---------- */
+function renderRooms() {
+  const g = $("roomGrid");
+  g.innerHTML = "";
+  ROOM_TYPES.forEach((rt) => {
+    const b = make("button", "tog", rt.name);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(state.room === rt.id));
+    b.addEventListener("click", () => setRoom(rt.id));
+    g.appendChild(b);
+  });
+  $("roomHint").textContent = ROOM_TYPES.length + " rooms";
+}
+
+/* ---------- styles ---------- */
+function renderStyleGroups() {
+  const wrap = $("styleGroups");
+  wrap.innerHTML = "";
+  [{ id: "all", name: "All" }].concat(STYLE_GROUPS).forEach((g) => {
+    const b = make("button", "mini-chip", g.name);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(state.styleGroup === g.id));
+    b.addEventListener("click", () => { state.styleGroup = g.id; renderStyleGroups(); renderStyles(); });
+    wrap.appendChild(b);
+  });
+}
+function filteredStyles() {
+  const toks = tokens(state.styleQuery);
+  return STYLES.filter((s) => (state.styleGroup === "all" || s.group === state.styleGroup) && hit(s.hay, toks));
+}
+function renderStyles() {
+  const list = filteredStyles();
+  const grpName = (id) => (byId(STYLE_GROUPS, id) || {}).name || "";
+  $("styleHint").textContent = list.length === STYLES.length ? STYLES.length + " styles" : list.length + " of " + STYLES.length;
+
+  const picked = $("stylePicked");
+  picked.innerHTML = "";
+  const cur = styleById(state.style);
+  if (cur) {
+    const row = make("div", "picked");
+    const t = make("div", "grow");
+    t.appendChild(document.createTextNode("Selected: "));
+    t.appendChild(make("b", null, cur.name));
+    row.appendChild(t);
+    const clr = make("button", null, "Clear");
+    clr.type = "button";
+    clr.addEventListener("click", () => setStyle(null));
+    row.appendChild(clr);
+    picked.appendChild(row);
+  }
+
+  const wrap = $("styleList");
+  wrap.innerHTML = "";
+  if (!list.length) {
+    wrap.appendChild(make("div", "empty-note", "No style matches “" + state.styleQuery.trim() + "”. Try a material or mood, like “velvet” or “calm”."));
+    return;
+  }
+  list.forEach((s) => {
+    const card = make("button", "style-card");
+    card.type = "button";
+    card.dataset.style = s.id;
+    card.setAttribute("aria-pressed", String(state.style === s.id));
+    const top = make("div", "sc-top");
+    top.appendChild(make("span", "sc-name", s.name));
+    top.appendChild(make("span", "sc-grp", grpName(s.group)));
+    card.appendChild(top);
+    card.appendChild(make("div", "sc-desc", s.description));
+    wrap.appendChild(card);
+  });
+}
+
+/* ---------- palettes + moods ---------- */
+function renderPalettes() {
+  const toks = tokens(state.paletteQuery);
+  const style = styleById(state.style);
+  const list = COLOR_PALETTES.filter((p) => hit((p.name + " " + p.id).toLowerCase(), toks));
+  $("paletteHint").textContent = list.length === COLOR_PALETTES.length ? COLOR_PALETTES.length + " palettes" : list.length + " of " + COLOR_PALETTES.length;
+  const wrap = $("paletteList");
+  wrap.innerHTML = "";
+  if (!list.length) { wrap.appendChild(make("div", "empty-note", "No palette by that name.")); return; }
+  list.forEach((p) => {
+    const b = make("button", "palette-opt");
+    b.type = "button";
+    b.dataset.palette = p.id;
+    b.setAttribute("aria-pressed", String(state.palette === p.id));
+    const row = make("span", "swatch-row");
+    p.colors.forEach((c) => { const sw = make("span"); sw.style.background = c; row.appendChild(sw); });
+    b.appendChild(row);
+    b.appendChild(make("span", "po-name", p.name));
+    if (style && style.typicalPalette === p.id) b.appendChild(make("span", "po-tag", "Suits style"));
+    wrap.appendChild(b);
+  });
+}
+function renderMoods() {
+  const g = $("moodGrid");
+  g.innerHTML = "";
+  LIGHTING_MOODS.forEach((m) => {
+    const b = make("button", "tog", m.label);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(state.mood === m.id));
+    b.addEventListener("click", () => { state.mood = m.id; renderMoods(); renderOutputs(); });
+    g.appendChild(b);
+  });
+}
+
+/* ---------- library ---------- */
+function roomSearchList() {
+  const toks = tokens(state.search);
+  return ITEMS.filter((i) => (state.showAll || i.roomTypes.includes(state.room)) && hit(i.hay, toks));
+}
+function renderChips(base) {
+  const wrap = $("chips");
+  wrap.innerHTML = "";
+  const counts = {};
+  base.forEach((i) => { counts[i.category] = (counts[i.category] || 0) + 1; });
+  const mk = (id, label, n) => {
+    const b = make("button", "chip", label);
+    b.type = "button";
+    b.dataset.cat = id;
+    b.setAttribute("aria-pressed", String(state.category === id));
+    b.appendChild(make("span", "n", fmtNum(n)));
+    wrap.appendChild(b);
+  };
+  mk("all", "All", base.length);
+  CATEGORIES.forEach((c) => { if (counts[c.id]) mk(c.id, c.name, counts[c.id]); });
+}
+function renderLibrary() {
+  const base = roomSearchList();
+  renderChips(base);
+  const body = $("libBody");
+  body.innerHTML = "";
+  let list = state.category === "all" ? base : base.filter((i) => i.category === state.category);
+
+  const matches = state.style ? list.filter((i) => matchSet.has(i.id)).length : 0;
+  const meta = $("libMeta");
+  meta.innerHTML = "";
+  meta.appendChild(make("b", null, fmtNum(list.length)));
+  meta.appendChild(document.createTextNode(" pieces " + (state.showAll ? "across all rooms" : "for " + roomName(state.room).toLowerCase())));
+  if (state.style) meta.appendChild(document.createTextNode(" · " + fmtNum(matches) + " suit " + styleById(state.style).name + " (ochre edge, listed first)"));
+
+  if (!list.length) {
+    const msg = state.search.trim()
+      ? "No pieces match “" + state.search.trim() + "”. Try one word, or turn on “Show all rooms”."
+      : "No pieces for this room in this category. Turn on “Show all rooms” to browse everything.";
+    body.appendChild(make("div", "lib-empty", msg));
+    return;
+  }
+  const sel = new Set(state.selected);
+  CATEGORIES.forEach((cat) => {
+    const group = list.filter((i) => i.category === cat.id);
+    if (!group.length) return;
+    group.sort((a, b) =>
+      (matchSet.has(b.id) - matchSet.has(a.id)) || (b.sig - a.sig) ||
+      a.name.localeCompare(b.name) || a.finish.localeCompare(b.finish));
+    const limit = state.pages[cat.id] || PAGE;
+    const section = make("div", "cat-section");
+    const h = make("h3");
+    h.appendChild(make("span", null, cat.name));
+    h.appendChild(make("span", "n", fmtNum(group.length)));
+    section.appendChild(h);
+    const grid = make("div", "item-grid");
+    group.slice(0, limit).forEach((item) => {
+      const card = make("button", "item");
+      card.type = "button";
+      card.dataset.id = item.id;
+      card.dataset.selected = String(sel.has(item.id));
+      card.dataset.suggested = String(matchSet.has(item.id));
+      card.appendChild(make("div", "it-name", item.name));
+      if (item.finish) card.appendChild(make("div", "it-fin", item.finish));
+      card.appendChild(make("div", "it-prompt", item.promptText));
+      grid.appendChild(card);
+    });
+    section.appendChild(grid);
+    if (group.length > limit) {
+      const more = make("button", "btn more-btn", "Show " + Math.min(PAGE * 2, group.length - limit) + " more " + cat.name.toLowerCase() + " (" + fmtNum(group.length - limit) + " hidden)");
+      more.type = "button";
+      more.dataset.more = cat.id;
+      section.appendChild(more);
+    }
+    body.appendChild(section);
+  });
+}
+function syncCards() {
+  const sel = new Set(state.selected);
+  document.querySelectorAll("#libBody .item").forEach((c) => { c.dataset.selected = String(sel.has(c.dataset.id)); });
+}
+
+/* ---------- selection ---------- */
+function renderSelection() {
+  $("selCount").innerHTML = "";
+  const c = $("selCount");
+  c.appendChild(make("b", null, String(state.selected.length)));
+  c.appendChild(document.createTextNode(" / " + MAX_ITEMS));
+  const warnSlot = $("warnSlot");
+  warnSlot.innerHTML = "";
+  if (state.selected.length >= MAX_ITEMS) warnSlot.appendChild(make("div", "warn", "That’s the 12-piece limit. Remove one to add another; tight edits make sharper prompts."));
+  const listEl = $("selList");
+  listEl.innerHTML = "";
+  if (!state.selected.length) {
+    listEl.appendChild(make("div", "sel-empty", "Nothing added yet. Click pieces in the library to build your room."));
+    return;
+  }
+  state.selected.forEach((id) => {
+    const item = ITEM_MAP.get(id);
+    if (!item) return;
+    const row = make("div", "sel-item");
+    const text = make("div", "si-text");
+    text.appendChild(make("div", "si-name", item.name + (item.finish ? " · " + item.finish : "")));
+    text.appendChild(make("div", "si-cat", (byId(CATEGORIES, item.category) || {}).name || item.category));
+    row.appendChild(text);
+    const rm = make("button", "sel-remove", "×");
+    rm.type = "button";
+    rm.setAttribute("aria-label", "Remove " + item.name);
+    rm.addEventListener("click", () => removeItem(id));
+    row.appendChild(rm);
+    listEl.appendChild(row);
+  });
+}
+
+/* ---------- camera ---------- */
+const CAM_SPOTS = {
+  fl: { x: 22, y: 128, kind: "corner", name: "front-left", opp: "back-right" },
+  fr: { x: 148, y: 128, kind: "corner", name: "front-right", opp: "back-left" },
+  bl: { x: 22, y: 22, kind: "corner", name: "back-left", opp: "front-right" },
+  br: { x: 148, y: 22, kind: "corner", name: "back-right", opp: "front-left" },
+  f:  { x: 85, y: 128, kind: "wall", name: "entry wall", toward: "the back wall" },
+  b:  { x: 85, y: 22, kind: "wall", name: "back wall", toward: "the entry" },
+  l:  { x: 22, y: 75, kind: "wall", name: "left wall", toward: "the right wall" },
+  r:  { x: 148, y: 75, kind: "wall", name: "right wall", toward: "the left wall" },
+  top: { x: 85, y: 75, kind: "top", name: "overhead" },
+};
+const CAM_HEIGHTS = [
+  { id: "low", label: "Low", phrase: "low camera height of about 0.8 m" },
+  { id: "eye", label: "Eye level", phrase: "camera at eye level, about 1.5 m, with vertical lines kept straight" },
+  { id: "high", label: "High", phrase: "elevated camera at about 2.2 m looking slightly down" },
+];
+const CAM_LENSES = [
+  { id: "16", label: "16 mm", phrase: "16 mm ultra-wide lens" },
+  { id: "24", label: "24 mm", phrase: "24 mm wide-angle lens" },
+  { id: "35", label: "35 mm", phrase: "35 mm lens with natural proportions" },
+  { id: "50", label: "50 mm", phrase: "50 mm lens for a tighter vignette" },
+  { id: "85", label: "85 mm", phrase: "85 mm lens for a close detail shot" },
+];
+const RATIOS = ["16:9", "3:2", "4:5", "1:1", "9:16"];
+const FORMATS = [{ id: "plain", label: "Any tool" }, { id: "mj", label: "Midjourney" }];
+const PLAN_MODES = [
+  { id: "plan", label: "Floor plan" },
+  { id: "blueprint", label: "Blueprint" },
+  { id: "elevation", label: "Wall elevation" },
+  { id: "iso", label: "Isometric" },
+  { id: "flat", label: "Flat illustration" },
+  { id: "board", label: "Moodboard" },
+];
+
+function cameraPhrase() {
+  const s = CAM_SPOTS[state.cam.pos];
+  if (s.kind === "top") return "overhead view looking straight down from the ceiling, flat-lay composition";
+  if (s.kind === "corner") return "photographed from the " + s.name + " corner looking diagonally toward the " + s.opp + " corner, two-point perspective showing two walls";
+  if (state.cam.pos === "f") return "photographed from the entry doorway looking straight at the back wall, one-point perspective with a centred, symmetrical composition";
+  return "photographed from the " + s.name + " looking toward " + s.toward + ", one-point perspective";
+}
+function elevationWall() {
+  return { f: "back wall", b: "entry wall", l: "right wall", r: "left wall", fl: "back wall", fr: "back wall", bl: "entry wall", br: "entry wall", top: "main wall" }[state.cam.pos];
+}
+function seg(containerId, options, current, onPick) {
+  const wrap = $(containerId);
+  wrap.innerHTML = "";
+  options.forEach((o) => {
+    const id = typeof o === "string" ? o : o.id;
+    const label = typeof o === "string" ? o : o.label;
+    const b = make("button", "tog", label);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(current === id));
+    b.addEventListener("click", () => onPick(id));
+    wrap.appendChild(b);
+  });
+}
+function svgEl(tag, attrs) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+  return el;
+}
+function renderCamPlan() {
+  const svg = svgEl("svg", { viewBox: "0 0 170 160", class: "cam-svg", role: "group", "aria-label": "Room plan: choose the camera position" });
+  const defs = svgEl("defs", {});
+  const clip = svgEl("clipPath", { id: "roomClip" });
+  clip.appendChild(svgEl("rect", { x: 22, y: 22, width: 126, height: 106 }));
+  defs.appendChild(clip);
+  svg.appendChild(defs);
+  svg.appendChild(svgEl("rect", { x: 22, y: 22, width: 126, height: 106, class: "floor" }));
+  svg.appendChild(svgEl("line", { x1: 100, y1: 128, x2: 124, y2: 128, class: "door" }));
+  svg.appendChild(svgEl("path", { d: "M100 128 A24 24 0 0 1 124 104", class: "swing" }));
+  const lbl = (t, x, y, anchor) => { const e = svgEl("text", { x, y, class: "lbl", "text-anchor": anchor || "middle" }); e.textContent = t; svg.appendChild(e); };
+  lbl("BACK", 85, 15);
+  lbl("ENTRY", 112, 146);
+  if (state.size.w && state.size.l && sizeOk()) lbl(sizeOk().w + " × " + sizeOk().l + " m", 85, 158);
+
+  const s = CAM_SPOTS[state.cam.pos];
+  if (s.kind === "top") {
+    svg.appendChild(svgEl("rect", { x: 30, y: 30, width: 110, height: 90, class: "top-hatch" }));
+  } else {
+    const cx = 85, cy = 75;
+    const a = Math.atan2(cy - s.y, cx - s.x);
+    const half = { "16": 0.85, "24": 0.7, "35": 0.52, "50": 0.38, "85": 0.22 }[state.cam.lens];
+    const R = 220;
+    const p1 = [s.x + R * Math.cos(a - half), s.y + R * Math.sin(a - half)];
+    const p2 = [s.x + R * Math.cos(a + half), s.y + R * Math.sin(a + half)];
+    svg.appendChild(svgEl("polygon", { points: s.x + "," + s.y + " " + p1.join(",") + " " + p2.join(","), class: "cone", "clip-path": "url(#roomClip)" }));
+  }
+  Object.entries(CAM_SPOTS).forEach(([id, p]) => {
+    const c = svgEl("circle", { cx: p.x, cy: p.y, r: id === "top" ? 8 : 7, class: "spot" + (state.cam.pos === id ? " on" : ""), tabindex: 0, role: "button",
+      "aria-label": p.kind === "top" ? "Overhead view" : "Camera at the " + p.name + (p.kind === "corner" ? " corner" : ""), "aria-pressed": String(state.cam.pos === id) });
+    const t = svgEl("title", {}); t.textContent = p.kind === "top" ? "Overhead" : p.name + (p.kind === "corner" ? " corner" : "");
+    c.appendChild(t);
+    const pick = () => { state.cam.pos = id; renderCamera(); renderOutputs(); };
+    c.addEventListener("click", pick);
+    c.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+    svg.appendChild(c);
+  });
+  const host = $("camPlan");
+  host.innerHTML = "";
+  host.appendChild(svg);
+}
+function renderCamera() {
+  renderCamPlan();
+  seg("camHeight", CAM_HEIGHTS, state.cam.height, (v) => { state.cam.height = v; renderCamera(); renderOutputs(); });
+  seg("camLens", CAM_LENSES, state.cam.lens, (v) => { state.cam.lens = v; renderCamera(); renderOutputs(); });
+  seg("camRatio", RATIOS, state.cam.ratio, (v) => { state.cam.ratio = v; renderCamera(); renderOutputs(); });
+  seg("fmtSeg", FORMATS, state.cam.fmt, (v) => { state.cam.fmt = v; renderCamera(); renderOutputs(); });
+  const s = CAM_SPOTS[state.cam.pos];
+  const read = $("camRead");
+  read.innerHTML = "";
+  read.appendChild(make("b", null, s.kind === "top" ? "Overhead" : s.kind === "corner" ? "From the " + s.name + " corner" : "From the " + s.name));
+  read.appendChild(document.createTextNode(s.kind === "top" ? " · straight down" : s.kind === "corner" ? " · diagonal, two walls in frame" : " · straight-on, one-point perspective"));
+}
+
+/* ---------- prompts ---------- */
+function promptParts() {
+  const style = styleById(state.style);
+  const palette = byId(COLOR_PALETTES, state.palette);
+  const mood = byId(LIGHTING_MOODS, state.mood);
+  const sz = sizeOk();
+  return {
+    style, palette, mood, sz,
+    styleName: style ? style.name.toLowerCase() : "",
+    room: roomName(state.room).toLowerCase(),
+    sizeText: sz ? " of about " + sz.w + " × " + sz.l + " m" : "",
+    items: joinNaturally(state.selected.map((id) => (ITEM_MAP.get(id) || {}).promptText).filter(Boolean)),
+    materials: style ? joinNaturally(style.typicalMaterials) : "",
+    keywords: style ? style.keywords.slice(0, 3).join(", ") : "",
+    paletteText: palette ? palette.name.toLowerCase() + " colour palette" : "",
+  };
+}
+function build3D() {
+  const p = promptParts();
+  if (!p.style || !p.items) return "";
+  const h = byId(CAM_HEIGHTS, state.cam.height), l = byId(CAM_LENSES, state.cam.lens);
+  const cam = state.cam.pos === "top" ? cameraPhrase() + ", " + l.phrase : cameraPhrase() + ", " + h.phrase + ", " + l.phrase;
+  const body = [
+    "A " + p.styleName + " " + p.room + p.sizeText + " with " + p.items,
+    p.paletteText, p.materials, p.keywords, p.mood.phrase, cam,
+    "photorealistic, high detail, interior design photography",
+  ].filter(Boolean).join(", ");
+  return state.cam.fmt === "mj" ? body + " --ar " + state.cam.ratio + " --style raw" : body + ", " + state.cam.ratio + " aspect ratio.";
+}
+function build2D() {
+  const p = promptParts();
+  if (!p.style || !p.items) return "";
+  const dims = p.sz ? ", dimension lines in metres" : ", dimension lines";
+  const look = p.styleName + " " + p.room;
+  let s;
+  switch (state.plan) {
+    case "blueprint":
+      s = "A 2D architectural blueprint of a " + look + p.sizeText + ", technical CAD drawing in fine white lines on a deep blue background, top-down furniture layout showing " + p.items + ", wall thicknesses, door swing on the entry wall, window openings" + dims + ", hand-lettered labels and a title block, orthographic view with no shading";
+      break;
+    case "elevation":
+      s = "A 2D front elevation drawing of the " + elevationWall() + " of a " + look + p.sizeText + ", flat orthographic view with no perspective, showing " + p.items + " drawn to scale against the wall, " + p.paletteText + " as flat fills, " + p.materials + " rendered as flat textures, material callouts" + dims + ", clean architectural linework on a white background";
+      break;
+    case "iso":
+      s = "A 2.5D isometric cutaway illustration of a " + look + p.sizeText + ", ceiling and two walls removed, 30-degree isometric angle, showing " + p.items + ", " + p.paletteText + ", " + p.materials + ", " + p.mood.phrase + ", clean vector style with soft shading on a plain background";
+      break;
+    case "flat":
+      s = "A flat 2D vector illustration of a " + look + ", straight-on front view with no perspective distortion, " + p.items + ", " + p.paletteText + ", simple shapes, minimal outlines, no gradients, editorial illustration style";
+      break;
+    case "board":
+      s = "A 2D interior design moodboard for a " + look + ": cut-out product images of " + p.items + ", " + p.palette.name.toLowerCase() + " colour swatches (" + p.palette.colors.join(", ") + "), material samples of " + p.materials + ", arranged on a neutral background with small labels, flat lay, top-down";
+      break;
+    default:
+      s = "A 2D top-down architectural floor plan of a " + look + p.sizeText + ", orthographic view with no perspective, showing " + p.items + " as clean furniture symbols in sensible positions, " + p.paletteText + " as flat colour fills, " + p.materials + " shown as flat textures, solid walls with a door swing on the entry wall and window openings, room label" + dims + ", scale bar and north arrow, crisp vector linework on a white background";
+  }
+  const ratio = state.plan === "plan" || state.plan === "blueprint" || state.plan === "board" ? "1:1" : state.cam.ratio;
+  return state.cam.fmt === "mj" ? s + " --ar " + ratio : s + ", " + ratio + " aspect ratio.";
+}
+function currentPrompt() { return state.out === "2d" ? build2D() : build3D(); }
+
+function renderPrompt() {
+  const el = $("promptText");
+  const hasStyle = state.style != null, hasItems = state.selected.length > 0;
+  const text = currentPrompt();
+  if (text) {
+    el.classList.remove("empty");
+    el.textContent = text;
+    const words = text.split(/\s+/).length;
+    $("promptMeta").textContent = fmtNum(words) + " words · " + fmtNum(text.length) + " characters";
+  } else {
+    el.classList.add("empty");
+    el.textContent = !hasStyle && !hasItems
+      ? "Pick a style and add a few pieces. Your " + (state.out === "2d" ? "2D" : "render") + " prompt builds itself here, ready to paste into any AI image tool."
+      : !hasStyle ? "Choose a style to name the look, and the full prompt appears here."
+      : "Add a few pieces from the library, and the full prompt appears here.";
+    $("promptMeta").textContent = "";
+  }
+  $("tab3d").setAttribute("aria-selected", String(state.out === "3d"));
+  $("tab2d").setAttribute("aria-selected", String(state.out === "2d"));
+  $("planModes").hidden = state.out !== "2d";
+  if (state.out === "2d") seg("planModes", PLAN_MODES, state.plan, (v) => { state.plan = v; renderPrompt(); });
+}
+function renderPreview() {
+  const pv = $("preview");
+  pv.innerHTML = "";
+  const p = promptParts();
+  pv.appendChild(make("div", "pv-kicker", "The look"));
+  pv.appendChild(make("div", "pv-style", p.style ? p.style.name : "Choose a style"));
+  pv.appendChild(make("div", "pv-room", roomName(state.room) + (p.sz ? " · " + p.sz.w + " × " + p.sz.l + " m" : "")));
+  if (p.palette) {
+    const sw = make("div", "pv-swatches");
+    p.palette.colors.forEach((c) => { const s = make("span"); s.style.background = c; sw.appendChild(s); });
+    pv.appendChild(sw);
+  }
+  if (p.style) {
+    pv.appendChild(make("div", "pv-section-label", "Materials"));
+    const tags = make("div", "pv-tags");
+    p.style.typicalMaterials.forEach((m) => tags.appendChild(make("span", "pv-tag", m)));
+    pv.appendChild(tags);
+  }
+  pv.appendChild(make("div", "pv-section-label", "Pieces (" + state.selected.length + ")"));
+  pv.appendChild(make("div", "pv-items", state.selected.length
+    ? state.selected.map((id) => { const i = ITEM_MAP.get(id); return i ? i.name + (i.finish ? " (" + i.finish.toLowerCase() + ")" : "") : ""; }).filter(Boolean).join(" · ")
+    : "No pieces yet"));
+  const line = (label, val) => { const d = make("div", "pv-line"); d.appendChild(document.createTextNode(label + " ")); d.appendChild(make("b", null, val)); pv.appendChild(d); };
+  line("Lighting:", p.mood.label);
+  const s = CAM_SPOTS[state.cam.pos];
+  line("Camera:", (s.kind === "top" ? "overhead" : s.name + (s.kind === "corner" ? " corner" : "")) + ", " + state.cam.lens + " mm, " + state.cam.ratio);
+}
+function renderOutputs() { renderPrompt(); renderPreview(); }
+
+/* ---------- actions ---------- */
+function setRoom(id) {
+  state.room = id; state.category = "all"; state.pages = {};
+  renderRooms(); renderLibrary(); renderOutputs();
+}
+function setStyle(id, quiet) {
+  state.style = id;
+  state.pages = {};
+  computeMatches();
+  const s = styleById(id);
+  if (s && !state.paletteTouched && byId(COLOR_PALETTES, s.typicalPalette)) {
+    state.palette = s.typicalPalette;
+    if (!quiet) toast("Palette set to " + byId(COLOR_PALETTES, s.typicalPalette).name + " to suit " + s.name);
+  }
+  renderStyles(); renderPalettes(); renderLibrary(); renderOutputs();
+}
+function toggleItem(id) {
+  const i = state.selected.indexOf(id);
+  if (i >= 0) state.selected.splice(i, 1);
+  else {
+    if (state.selected.length >= MAX_ITEMS) { toast("12-piece limit reached. Remove one first."); renderSelection(); return; }
+    state.selected.push(id);
+  }
+  afterSelectionChange();
+}
+function removeItem(id) { state.selected = state.selected.filter((x) => x !== id); afterSelectionChange(); }
+function afterSelectionChange() { syncCards(); renderSelection(); renderOutputs(); }
+
+function shuffle(a) { for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; }
+function randomize() {
+  const style = STYLES[Math.floor(Math.random() * STYLES.length)];
+  state.paletteTouched = false;
+  state.style = style.id;
+  computeMatches();
+  if (byId(COLOR_PALETTES, style.typicalPalette)) state.palette = style.typicalPalette;
+  let pool = ITEMS.filter((i) => matchSet.has(i.id) && i.roomTypes.includes(state.room));
+  if (pool.length < 5) pool = ITEMS.filter((i) => i.roomTypes.includes(state.room));
+  // one piece per base so we don't pick three finishes of the same sofa
+  const seen = new Set(), picks = [];
+  shuffle(pool.slice()).forEach((i) => { const b = i.id.split("--")[0]; if (!seen.has(b)) { seen.add(b); picks.push(i.id); } });
+  state.selected = picks.slice(0, 5 + Math.floor(Math.random() * 3));
+  const spots = ["fl", "fr", "f", "bl", "br"];
+  state.cam.pos = spots[Math.floor(Math.random() * spots.length)];
+  state.pages = {};
+  renderAll();
+  toast("Surprised you with " + style.name);
+}
+function reset() {
+  Object.assign(state, { style: null, styleQuery: "", styleGroup: "all", palette: "warm-neutrals", paletteTouched: false, paletteQuery: "",
+    mood: "daylight", selected: [], search: "", category: "all", showAll: false, pages: {}, out: "3d", plan: "plan", size: { w: "", l: "" } });
+  state.cam = { pos: "fl", height: "eye", lens: "24", ratio: "16:9", fmt: "plain" };
+  computeMatches();
+  ["search", "styleSearch", "paletteSearch", "sizeW", "sizeL"].forEach((id) => { $(id).value = ""; });
+  $("showAll").setAttribute("aria-pressed", "false");
+  $("showAll").textContent = "Show all rooms";
+  renderAll();
+  toast("Cleared");
+}
+
+/* ---------- copy ---------- */
+function copyPrompt() {
+  const text = currentPrompt();
+  if (!text) { toast("Pick a style and add a piece first"); return; }
+  const done = () => {
+    const btn = $("copyBtn");
+    btn.textContent = "Copied ✓";
+    toast((state.out === "2d" ? "2D" : "Render") + " prompt copied");
+    setTimeout(() => { btn.textContent = "Copy prompt"; }, 1400);
+  };
+  const fallback = () => {
+    const range = document.createRange();
+    range.selectNodeContents($("promptText"));
+    const s = window.getSelection(); s.removeAllRanges(); s.addRange(range);
+    toast("Prompt selected. Press Ctrl+C (⌘C on Mac) to copy.");
+  };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(fallback);
+    else fallback();
+  } catch (e) { fallback(); }
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2000);
+}
+
+function wireDrawers() {
+  const left = $("colLeft"), right = $("colRight"), scrim = $("scrim");
+  const close = () => { left.classList.remove("open"); right.classList.remove("open"); scrim.classList.remove("show"); };
+  $("openLeft").addEventListener("click", () => { close(); left.classList.add("open"); scrim.classList.add("show"); });
+  $("openRight").addEventListener("click", () => { close(); right.classList.add("open"); scrim.classList.add("show"); });
+  scrim.addEventListener("click", close);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+}
+
+function renderAll() {
+  renderRooms(); renderStyleGroups(); renderStyles(); renderPalettes(); renderMoods();
+  renderLibrary(); renderSelection(); renderCamera(); renderOutputs();
+}
+function init() {
+  $("search").placeholder = "Search " + fmtNum(ITEMS.length) + " pieces — velvet sofa, zellige, olive tree…";
+  // Open on a worked example so the first view shows real output; Reset clears it.
+  state.style = "japandi";
+  state.palette = "earth-tones";
+  computeMatches();
+  state.selected = ["sectional-sofa", "coffee-wood--oak", "paper-lantern", "wool-rug", "linen-curtains", "p-bonsai--cplanter"].filter((id) => ITEM_MAP.has(id));
+  renderAll();
+
+  let t1 = null;
+  $("search").addEventListener("input", (e) => {
+    clearTimeout(t1);
+    t1 = setTimeout(() => { state.search = e.target.value; state.category = "all"; state.pages = {}; renderLibrary(); }, 120);
+  });
+  $("styleSearch").addEventListener("input", (e) => { state.styleQuery = e.target.value; renderStyles(); });
+  $("paletteSearch").addEventListener("input", (e) => { state.paletteQuery = e.target.value; renderPalettes(); });
+  ["sizeW", "sizeL"].forEach((id) => $(id).addEventListener("input", () => {
+    state.size = { w: $("sizeW").value, l: $("sizeL").value };
+    renderCamPlan(); renderOutputs();
+  }));
+  $("styleList").addEventListener("click", (e) => {
+    const c = e.target.closest("[data-style]");
+    if (c) setStyle(state.style === c.dataset.style ? null : c.dataset.style);
+  });
+  $("paletteList").addEventListener("click", (e) => {
+    const c = e.target.closest("[data-palette]");
+    if (!c) return;
+    state.palette = c.dataset.palette; state.paletteTouched = true;
+    renderPalettes(); renderOutputs();
+  });
+  $("chips").addEventListener("click", (e) => {
+    const c = e.target.closest("[data-cat]");
+    if (!c) return;
+    state.category = state.category === c.dataset.cat ? "all" : c.dataset.cat;
+    renderLibrary();
+  });
+  $("libBody").addEventListener("click", (e) => {
+    const more = e.target.closest("[data-more]");
+    if (more) { const k = more.dataset.more; state.pages[k] = (state.pages[k] || PAGE) + PAGE * 2; renderLibrary(); return; }
+    const card = e.target.closest("[data-id]");
+    if (card) toggleItem(card.dataset.id);
+  });
+  $("showAll").addEventListener("click", (e) => {
+    state.showAll = !state.showAll;
+    e.currentTarget.setAttribute("aria-pressed", String(state.showAll));
+    e.currentTarget.textContent = state.showAll ? "This room only" : "Show all rooms";
+    state.category = "all"; state.pages = {};
+    renderLibrary();
+  });
+  $("tab3d").addEventListener("click", () => { state.out = "3d"; renderPrompt(); });
+  $("tab2d").addEventListener("click", () => { state.out = "2d"; renderPrompt(); });
+  $("randomizeBtn").addEventListener("click", randomize);
+  $("resetBtn").addEventListener("click", reset);
+  $("copyBtn").addEventListener("click", copyPrompt);
+  wireDrawers();
+}
+document.addEventListener("DOMContentLoaded", init);
+
+</script>
+
+</body>
+</html>
