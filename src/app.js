@@ -1,7 +1,8 @@
 /* app.js — Roomprompt v2 logic. In-memory state; data from SIGNATURE_ITEMS + data2.js. */
 "use strict";
 
-const MAX_ITEMS = 12;
+const MAX_ITEMS = 40;
+const LONG_LIST = 15;   // past this, show a gentle note about prompt length
 const PAGE = 24;
 
 /* ---------- expand data ---------- */
@@ -328,7 +329,8 @@ function renderSelection() {
   c.appendChild(document.createTextNode(" / " + MAX_ITEMS));
   const warnSlot = $("warnSlot");
   warnSlot.innerHTML = "";
-  if (state.selected.length >= MAX_ITEMS) warnSlot.appendChild(make("div", "warn", "That’s the 12-piece limit. Remove one to add another; tight edits make sharper prompts."));
+  if (state.selected.length >= MAX_ITEMS) warnSlot.appendChild(make("div", "warn", "That’s the " + MAX_ITEMS + "-piece limit. Remove one to add another."));
+  else if (state.selected.length > LONG_LIST) warnSlot.appendChild(make("div", "note", "Long list: some image tools give the most weight to the first part of a prompt, so put your key pieces first."));
   const listEl = $("selList");
   listEl.innerHTML = "";
   if (!state.selected.length) {
@@ -599,7 +601,7 @@ function toggleItem(id) {
   const i = state.selected.indexOf(id);
   if (i >= 0) state.selected.splice(i, 1);
   else {
-    if (state.selected.length >= MAX_ITEMS) { toast("12-piece limit reached. Remove one first."); renderSelection(); return; }
+    if (state.selected.length >= MAX_ITEMS) { toast(MAX_ITEMS + "-piece limit reached. Remove one first."); renderSelection(); return; }
     state.selected.push(id);
   }
   afterSelectionChange();

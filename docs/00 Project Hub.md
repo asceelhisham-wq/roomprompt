@@ -38,4 +38,4 @@ tags: [project, roomprompt, hub]
 | Lighting moods | 4 | **9** |
 | Camera | — | 9 spots on a plan, 3 heights, 5 lenses, 5 ratios |
 | Outputs | 3D prompt | 3D prompt + **6 kinds of 2D prompt** |
-| Max items per prompt | 12 | 12 |
+| Max items per prompt | 12 | 40 |

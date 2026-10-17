@@ -15,6 +15,7 @@ matchSet  // ids of pieces that suit the current style, rebuilt on style change
 | Action | Effect |
 |---|---|
 | `setStyle` | rebuild `matchSet`; set palette to the style's palette unless `paletteTouched`; re-sort library |
+| Limit | `MAX_ITEMS = 40`; past 15 pieces a note suggests putting key pieces first |
 | `toggleItem` | updates cards in place (`syncCards`), selection, prompt, preview — no library rebuild |
 | Library clicks | one delegated listener on `#libBody` for cards and "Show more" |
 | `randomize` | random style + palette, one piece per base (5–7), random camera spot |
